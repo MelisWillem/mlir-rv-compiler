@@ -1,4 +1,4 @@
-//===- StandaloneOps.h - Standalone dialect ops -----------------*- C++ -*-===//
+//===- RVIROps.h - RVIR dialect ops -----------------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef STANDALONE_STANDALONEOPS_H
-#define STANDALONE_STANDALONEOPS_H
+#ifndef VRIR_VRIROPS_H
+#define VRIR_VRIROPS_H
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -16,6 +16,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #define GET_OP_CLASSES
-#include "Standalone/StandaloneOps.h.inc"
+#include "RVIR/RVIROps.h.inc"
 
-#endif // STANDALONE_STANDALONEOPS_H
+#endif // VRIR_VRIROPS_H

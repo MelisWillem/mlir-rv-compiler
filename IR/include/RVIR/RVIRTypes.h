@@ -1,4 +1,4 @@
-//===- StandaloneTypes.h - Standalone dialect types -------------*- C++ -*-===//
+//===- RVIRTypes.h - RVIR dialect types -------------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef STANDALONE_STANDALONETYPES_H
-#define STANDALONE_STANDALONETYPES_H
+#ifndef RVIR_RVIRTYPES_H
+#define RVIR_RVIRTYPES_H
 
 #include "mlir/IR/BuiltinTypes.h"
 
 #define GET_TYPEDEF_CLASSES
-#include "Standalone/StandaloneOpsTypes.h.inc"
+#include "RVIR/RVIROpsTypes.h.inc"
 
-#endif // STANDALONE_STANDALONETYPES_H
+#endif // RVIR_RVIRTYPES_H

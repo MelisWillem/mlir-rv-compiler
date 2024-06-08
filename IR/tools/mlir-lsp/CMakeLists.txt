@@ -5,6 +5,6 @@ target_link_libraries(mlir-lsp
     PRIVATE
     MLIRLspServerLib
     MLIRIR  
-    MLIRStandalone
+    RVIR
     MLIRArithDialect
 )

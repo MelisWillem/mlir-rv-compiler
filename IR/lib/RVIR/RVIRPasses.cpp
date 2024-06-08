@@ -1,4 +1,4 @@
-//===- StandalonePasses.cpp - Standalone passes -----------------*- C++ -*-===//
+//===- RVIRPasses.cpp - RVIR passes -----------------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,14 +11,14 @@
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-#include "Standalone/StandalonePasses.h"
+#include "RVIR/RVIRPasses.h"
 
-namespace mlir::standalone {
-#define GEN_PASS_DEF_STANDALONESWITCHBARFOO
-#include "Standalone/StandalonePasses.h.inc"
+namespace mlir::rvir {
+#define GEN_PASS_DEF_RVIRSWITCHBARFOO
+#include "RVIR/RVIRPasses.h.inc"
 
 namespace {
-class StandaloneSwitchBarFooRewriter : public OpRewritePattern<func::FuncOp> {
+class RVIRSwitchBarFooRewriter : public OpRewritePattern<func::FuncOp> {
 public:
   using OpRewritePattern<func::FuncOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(func::FuncOp op,
@@ -31,18 +31,18 @@ public:
   }
 };
 
-class StandaloneSwitchBarFoo
-    : public impl::StandaloneSwitchBarFooBase<StandaloneSwitchBarFoo> {
+class RVIRSwitchBarFoo
+    : public impl::RVIRSwitchBarFooBase<RVIRSwitchBarFoo> {
 public:
-  using impl::StandaloneSwitchBarFooBase<
-      StandaloneSwitchBarFoo>::StandaloneSwitchBarFooBase;
+  using impl::RVIRSwitchBarFooBase<
+      RVIRSwitchBarFoo>::RVIRSwitchBarFooBase;
   void runOnOperation() final {
     RewritePatternSet patterns(&getContext());
-    patterns.add<StandaloneSwitchBarFooRewriter>(&getContext());
+    patterns.add<RVIRSwitchBarFooRewriter>(&getContext());
     FrozenRewritePatternSet patternSet(std::move(patterns));
     if (failed(applyPatternsAndFoldGreedily(getOperation(), patternSet)))
       signalPassFailure();
   }
 };
 } // namespace
-} // namespace mlir::standalone
+} // namespace mlir::RVIR

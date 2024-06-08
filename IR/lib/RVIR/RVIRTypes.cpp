@@ -1,4 +1,4 @@
-//===- StandaloneTypes.cpp - Standalone dialect types -----------*- C++ -*-===//
+//===- RVIRTypes.cpp - RVIR dialect types -----------*- C++ -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Standalone/StandaloneTypes.h"
+#include "RVIR/RVIRTypes.h"
 
-#include "Standalone/StandaloneDialect.h"
+#include "RVIR/RVIRDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 
-using namespace mlir::standalone;
+using namespace mlir::rvir;
 
 #define GET_TYPEDEF_CLASSES
-#include "Standalone/StandaloneOpsTypes.cpp.inc"
+#include "RVIR/RVIROpsTypes.cpp.inc"
 
-void StandaloneDialect::registerTypes() {
+void RVIRDialect::registerTypes() {
+  llvm::dbgs() << "RVIRDialect::registerTypes() \n";
   addTypes<
 #define GET_TYPEDEF_LIST
-#include "Standalone/StandaloneOpsTypes.cpp.inc"
+#include "RVIR/RVIROpsTypes.cpp.inc"
       >();
 }

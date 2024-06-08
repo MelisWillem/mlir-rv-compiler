@@ -1,4 +1,4 @@
-//===- StandalonePsss.td - Standalone dialect passes -------*- tablegen -*-===//
+//===- RVIRPsss.td - RVIR dialect passes -------*- tablegen -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef STANDALONE_PASS
-#define STANDALONE_PASS
+#ifndef RVIR_PASS
+#define RVIR_PASS
 
 include "mlir/Pass/PassBase.td"
 
-def StandaloneSwitchBarFoo: Pass<"standalone-switch-bar-foo", "::mlir::ModuleOp"> {
+def RVIRSwitchBarFoo: Pass<"rvir-switch-bar-foo", "::mlir::ModuleOp"> {
   let summary = "Switches the name of a FuncOp named `bar` to `foo` and folds.";
   let description = [{
     Switches the name of a FuncOp named `bar` to `foo` and folds.
@@ -27,4 +27,4 @@ def StandaloneSwitchBarFoo: Pass<"standalone-switch-bar-foo", "::mlir::ModuleOp"
   }];
 }
 
-#endif // STANDALONE_PASS
+#endif // RVIR_PASS

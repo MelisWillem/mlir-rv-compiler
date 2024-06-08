@@ -5,11 +5,11 @@ set(LIBS
         ${conversion_libs}
         MLIRArithDialect
         MLIROptLib
-        MLIRStandalone
+        RVIR
         )
-add_llvm_executable(standalone-opt standalone-opt.cpp)
+add_llvm_executable(rvir-opt rvir-opt.cpp)
 
-llvm_update_compile_flags(standalone-opt)
-target_link_libraries(standalone-opt PRIVATE ${LIBS})
+llvm_update_compile_flags(rvir-opt)
+target_link_libraries(rvir-opt PRIVATE ${LIBS})
 
-mlir_check_all_link_libraries(standalone-opt)
+mlir_check_all_link_libraries(rvir-opt)

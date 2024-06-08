@@ -1,4 +1,4 @@
-//===- StandaloneTypes.td - Standalone dialect types -------*- tablegen -*-===//
+//===- RVIRTypes.td - RVIR dialect types -------*- tablegen -*-===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,26 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef STANDALONE_TYPES
-#define STANDALONE_TYPES
+#ifndef RVIR_TYPES
+#define RVIR_TYPES
 
 include "mlir/IR/AttrTypeBase.td"
-include "Standalone/StandaloneDialect.td"
+include "RVIR/RVIRDialect.td"
 
 //===----------------------------------------------------------------------===//
-// Standalone type definitions
+// RVIR type definitions
 //===----------------------------------------------------------------------===//
 
-class Standalone_Type<string name, string typeMnemonic, list<Trait> traits = []>
-    : TypeDef<Standalone_Dialect, name, traits> {
+class RVIR_Type<string name, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<RVIR_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
 
-def Standalone_CustomType : Standalone_Type<"Custom", "custom"> {
-    let summary = "Standalone custom type";
-    let description = "Custom type in standalone dialect";
+def RVIR_CustomType : RVIR_Type<"Custom", "custom"> {
+    let summary = "RVIR custom type";
+    let description = "Custom type in RVIR dialect";
     let parameters = (ins StringRefParameter<"the custom value">:$value);
     let assemblyFormat = "`<` $value `>`";
 }
 
-#endif // STANDALONE_TYPES
+#endif // RVIR_TYPES
