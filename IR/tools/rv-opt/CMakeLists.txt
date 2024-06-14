@@ -8,9 +8,9 @@ set(LIBS
         RVIR
         LLIR
         )
-add_llvm_executable(rvir-opt rvir-opt.cpp)
+add_llvm_executable(rv-opt rv-opt.cpp)
 
-llvm_update_compile_flags(rvir-opt)
-target_link_libraries(rvir-opt PRIVATE ${LIBS})
+llvm_update_compile_flags(rv-opt)
+target_link_libraries(rv-opt PRIVATE ${LIBS})
 
-mlir_check_all_link_libraries(rvir-opt)
+mlir_check_all_link_libraries(rv-opt)

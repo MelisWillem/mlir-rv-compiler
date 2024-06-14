@@ -7,12 +7,12 @@ configure_lit_site_cfg(
 
 set(RVIR_TEST_DEPENDS
         FileCheck count not
-        rvir-opt
+        rv-opt
         )
 
-add_lit_testsuite(check-rvir "Running the standalone regression tests"
+add_lit_testsuite(check-all "Running the standalone regression tests"
         ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${RVIR_TEST_DEPENDS}
         )
-set_target_properties(check-rvir PROPERTIES FOLDER "Tests")
+set_target_properties(check-all PROPERTIES FOLDER "Tests")
 add_lit_testsuites(RVIR ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${RVIR_TEST_DEPENDS})

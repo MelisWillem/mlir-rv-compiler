@@ -1,11 +1,3 @@
-//===- RVIRTypes.td - RVIR dialect types -------*- tablegen -*-===//
-//
-// This file is licensed under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 #ifndef RVIR_TYPES
 #define RVIR_TYPES
 
@@ -21,11 +13,8 @@ class RVIR_Type<string name, string typeMnemonic, list<Trait> traits = []>
   let mnemonic = typeMnemonic;
 }
 
-def RVIR_CustomType : RVIR_Type<"Custom", "custom"> {
-    let summary = "RVIR custom type";
-    let description = "Custom type in RVIR dialect";
-    let parameters = (ins StringRefParameter<"the custom value">:$value);
-    let assemblyFormat = "`<` $value `>`";
-}
+// Need to add some type or the default parsers won't work.
+// Once there is one custom type in the dialect this can be removed.
+def RVIR_CustomType : RVIR_Type<"Dummy", "dummy"> {}
 
 #endif // RVIR_TYPES

@@ -8,7 +8,7 @@ using namespace mlir::llir;
 #include "LLIR/LLIROpsDialect.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// RVIR dialect.
+// LLIR dialect.
 //===----------------------------------------------------------------------===//
 
 void LLIRDialect::initialize() {
