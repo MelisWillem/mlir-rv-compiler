@@ -6,6 +6,7 @@ set(LIBS
         MLIRArithDialect
         MLIROptLib
         RVIR
+        LLIR
         )
 add_llvm_executable(rvir-opt rvir-opt.cpp)
 

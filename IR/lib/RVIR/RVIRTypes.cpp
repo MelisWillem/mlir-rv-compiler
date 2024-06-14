@@ -20,7 +20,6 @@ using namespace mlir::rvir;
 #include "RVIR/RVIROpsTypes.cpp.inc"
 
 void RVIRDialect::registerTypes() {
-  llvm::dbgs() << "RVIRDialect::registerTypes() \n";
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "RVIR/RVIROpsTypes.cpp.inc"
