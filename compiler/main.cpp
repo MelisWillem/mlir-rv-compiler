@@ -18,6 +18,7 @@ int main(int argc, char **argv) {
     std::ifstream ifs(SourceFilename);
     if (!ifs.good()) {
         std::cout << "Can't read file with path=" << SourceFilename << "\n";
+        return -1;
     }
 
     std::ostringstream oss;
