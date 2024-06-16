@@ -1,3 +1,5 @@
+add_subdirectory(tokenizer)
+
 # The llvm does not make use of rtti,
 # let's disable it as well.
 add_definitions("-fno-rtti")

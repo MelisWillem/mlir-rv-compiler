@@ -1,0 +1,10 @@
+func foo(number: int, flag: bool) -> int{
+    if number > 23 {
+        return number;
+    }
+
+    if flag {
+        return 1;
+    }
+    return -1;
+}

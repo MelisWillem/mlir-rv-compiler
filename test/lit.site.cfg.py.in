@@ -1,5 +1,7 @@
 @LIT_SITE_CFG_IN_HEADER@
 
+config.project_bin_dir = "@PROJECT_BINARY_DIR@"
+
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.mlir_obj_dir = "@MLIR_BINARY_DIR@"
 config.mlir_obj_root = "@RVIR_BINARY_DIR@"
