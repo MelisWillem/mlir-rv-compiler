@@ -17,4 +17,5 @@ void HLIRDialect::initialize() {
 #include "HLIR/HLIROps.cpp.inc"
       >();
   registerTypes();
+  registerAttributes();
 }

@@ -17,14 +17,8 @@ def HLIR_Dialect : Dialect {
     let useDefaultTypePrinterParser = 1;
     let extraClassDeclaration = [{
         void registerTypes();
+        void registerAttributes();
     }];
 }
-
-//===----------------------------------------------------------------------===//
-// Base HLIR operation definition.
-//===----------------------------------------------------------------------===//
-
-class HLIR_Op<string mnemonic, list<Trait> traits = []> :
-        Op<HLIR_Dialect, mnemonic, traits>;
 
 #endif // HLIR_DIALECT

@@ -16,6 +16,8 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 
+#include "HLIR/HLIRAttributes.h"
+
 #define GET_OP_CLASSES
 #include "HLIR/HLIROps.h.inc"
 
