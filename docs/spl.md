@@ -22,3 +22,23 @@ func foo(number: int, flag: bool) -> int{
     return -1;
 }
 ```
+
+for loops:
+```
+func demo_for_range() {
+    var total:int = 1;
+    for i in range(0, 5){
+        total = total + i;
+    }
+}
+```
+
+```
+func demo_list(numbers:int[]) -> int{
+    var total:int = 1;
+    for n in numbers{
+        total = total + n;
+    }
+    return total;
+}
+```
