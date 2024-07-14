@@ -50,16 +50,18 @@ config.mlir_libs_dir = os.path.join(config.mlir_obj_root, "lib")
 config.substitutions.append(("%mlir_libs", config.mlir_libs_dir))
 
 # Add tokenizer tool
-config.token_path = os.path.join(os.path.join(config.project_bin_dir, "compiler"), "tokenizer")
+config.cspl_path = os.path.join(os.path.join(config.project_bin_dir, "compiler"))
+config.token_path = os.path.join(config.cspl_path, "tokenizer")
 
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
-tool_dirs = [config.mlir_tools_dir, config.llvm_tools_dir, config.token_path]
+tool_dirs = [config.mlir_tools_dir, config.llvm_tools_dir, config.token_path, config.cspl_path]
 tools = [
     "mlir-opt",
     "rv-opt",
-    "tokenizer"
+    "tokenizer",
+    "cspl"
 ]
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)

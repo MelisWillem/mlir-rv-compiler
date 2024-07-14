@@ -5,6 +5,7 @@
 #include"mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "mlir/IR/OpImplementation.h" // needed for things like AsmParser
+#include "mlir/IR/DialectImplementation.h" // needed for DialectAsmParser
 #include "mlir/IR/Builders.h"
 
 

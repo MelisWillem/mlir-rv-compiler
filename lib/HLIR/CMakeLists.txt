@@ -18,4 +18,5 @@ add_mlir_dialect_library(HLIR
         LINK_LIBS PUBLIC
         MLIRInferTypeOpInterface
         MLIRFuncDialect
+        MLIRSupport
         )

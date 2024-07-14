@@ -7,7 +7,7 @@ configure_lit_site_cfg(
 
 set(RVIR_TEST_DEPENDS
         FileCheck count not
-        rv-opt
+        rv-opt cspl tokenizer 
         )
 
 add_lit_testsuite(check-all "Running the standalone regression tests"

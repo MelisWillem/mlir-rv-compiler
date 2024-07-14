@@ -1,3 +1,4 @@
+#pragma once
 #include <optional>
 #include <string>
 #include <token/tokens.h>
@@ -10,8 +11,10 @@ class Tokenizer {
 public:
   struct Error {
     std::string message;
-    unsigned long cursor;
-    unsigned long cursorBegin;
+    unsigned long linenumber;
+    unsigned long charnumber;
+
+    std::string ToString() const;
   };
 
 private:
@@ -34,7 +37,7 @@ private:
   unsigned int lineNumber = 0;
 
   void RegisterError(std::string message) {
-    error = {message, cursor, cursorBegin};
+    error = {message, lineNumber, charNumber};
   }
 
   void ResetCursor() { cursorBegin = cursor + 1; }

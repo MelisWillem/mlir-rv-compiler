@@ -1,0 +1,16 @@
+"builtin.module"() ({
+  "hlir.func"() <{arg_attrs = [], function_type = (i32, i1) -> i32, res_attrs = [], sym_name = "foo"}> ({
+  ^bb0(%arg0: i32, %arg1: i1):
+    %0 = "hlir.Constant"() <{constant = 23 : i32}> : () -> i32
+    %1 = "hlir.Compare"(%arg0, %0) <{type = #hlir<CmpType greather>}> : (i32, i32) -> i1
+    "hlir.If"(%1) ({
+      "hlir.Return"(%arg0) : (i32) -> ()
+      "hlir.If"(%arg1) ({
+        %2 = "hlir.Constant"() <{constant = 1 : i32}> : () -> i32
+        "hlir.Return"(%2) : (i32) -> ()
+        %3 = "hlir.Constant"() <{constant = -1 : i32}> : () -> i32
+        "hlir.Return"(%3) : (i32) -> ()
+      }) : (i1) -> ()
+    }) : (i1) -> ()
+  }) : () -> ()
+}) : () -> ()

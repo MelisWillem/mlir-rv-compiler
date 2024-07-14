@@ -15,9 +15,9 @@ class HLIR_Op<string mnemonic, list<Trait> traits = []> :
         Op<HLIR_Dialect, mnemonic, traits>;
 
 def ConstantOp : HLIR_Op<"Constant">{
-  let arguments = (ins I32Attr:$valueAttr);
+  let arguments = (ins AnyAttrOf<[I1Attr, I32Attr]>:$constant);
 
-  let results = (outs I32:$value);
+  let results = (outs AnyTypeOf<[I32, I1]>:$value);
 }
 
 def CallOp : HLIR_Op<"Call">{

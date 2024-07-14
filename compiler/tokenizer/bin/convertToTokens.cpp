@@ -34,10 +34,7 @@ int main(int argc, char **argv) {
   }
 
   if (!success) {
-    std::cout << "Unable to tokenize source file(cursor="
-              << tkz.getError()->cursor
-              << " cursorBegin=" << tkz.getError()->cursorBegin
-              << ") with error=" << tkz.getError()->message << "\n";
+    std::cout << "Unable to tokenize: " << tkz.getError()->ToString() << "\n";
     return -1;
   }
 

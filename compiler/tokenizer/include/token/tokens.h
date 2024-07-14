@@ -19,6 +19,7 @@ enum class TokenType {
   RETURN,
   INT,
   BOOL,
+  VAR,
 
   // symbols
   COLON,
@@ -29,6 +30,7 @@ enum class TokenType {
   OPEN_CURLY,
   CLOSE_CURLY,
   COMMA,
+  ASSIGN,
 
   // operators
   PLUS,
@@ -39,6 +41,7 @@ enum class TokenType {
   SMALLER,
   GREATER_EQUAL,
   SMALLER_EQUAL,
+  EQUAL, // ==
 
   // generic
   NUMBER,
@@ -50,11 +53,19 @@ struct Token {
   TokenType type;
   Location loc;
   Data data;
+
+  std::string strData() const;  
+  int intData() const;  
+  int precedence() const;
+  bool isBinaryOperator() const;
+  bool isCmp() const;
 };
 
+std::string str(const TokenType t);
+
 // Printing of tokens.
-std::ostream& operator<<(std::ostream& os, TokenType& t);
-std::ostream& operator<<(std::ostream& os, Location& t);
-std::ostream& operator<<(std::ostream& os, Token& t);
+std::ostream& operator<<(std::ostream& os, const TokenType t);
+std::ostream& operator<<(std::ostream& os, const Location& t);
+std::ostream& operator<<(std::ostream& os, const Token& t);
 
 } // namespace tokenizer

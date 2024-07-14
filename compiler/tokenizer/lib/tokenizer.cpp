@@ -7,6 +7,13 @@
 
 namespace tokenizer {
 
+std::string Tokenizer::Error::ToString() const {
+  std::stringstream ss;
+  ss << "[linenumber=" << this->linenumber << " charnumber=" << this->charnumber
+     << "] ->" << message;
+  return ss.str();
+}
+
 std::optional<char> Tokenizer::Peek() const {
   if (!IsFinal()) {
     return sourceCode[cursor];
@@ -129,6 +136,13 @@ bool Tokenizer::Parse() {
         PushbackToken(TokenType::DIV);
       }
       break;
+    case '=': {
+      if (Peek() == '=') {
+        PushbackToken(TokenType::EQUAL);
+      }
+      PushbackToken(TokenType::ASSIGN);
+      break;
+    }
     case '>':
       if (Peek() == '=') {
         PushbackToken(TokenType::GREATER_EQUAL);
