@@ -86,7 +86,7 @@ class Parser {
   SymbolTable symbolTable;
 
   int cursor;
-  bool debug_enabled = true;
+  bool debug = true;
 
   Token Consume();
   Token Peek() const;
@@ -101,7 +101,7 @@ class Parser {
 
 public:
   Parser(const std::vector<Token> &tokens, mlir::MLIRContext *context,
-         const std::string &filename, const std::string &file_text);
+         const std::string &filename, const std::string &file_text, bool debug);
 
   // create IR
   std::optional<mlir::ModuleOp> Parse();

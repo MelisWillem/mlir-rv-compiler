@@ -12,12 +12,15 @@ cl::list<std::string> SourceFilenames("i", cl::desc("Specify source filename"),
                                       cl::value_desc("filename"), cl::Required);
 cl::opt<bool> HIL("HIL", cl::desc("Output HIL"), cl::init(false));
 cl::opt<std::string> OutputFile("o", cl::desc("Specify output filename"),
-                                      cl::value_desc("output"), cl::Required);
+                                cl::value_desc("output"), cl::Required);
+cl::opt<bool> debug_parser("debug_parser",
+                           cl::desc("print debug output for the parser"),
+                           cl::init(false));
 
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  if(SourceFilenames.empty()){
+  if (SourceFilenames.empty()) {
     std::cerr << "Provide input file location. \n";
   }
 
@@ -40,19 +43,19 @@ int main(int argc, char **argv) {
     }
     mlir::MLIRContext context;
     std::cout << "Found " << tkz.getTokens().size() << " tokens \n";
-    parser::Parser parser(tkz.getTokens(), &context, SourceFilename, SourceCode);
+    parser::Parser parser(tkz.getTokens(), &context, SourceFilename, SourceCode,
+                          debug_parser);
     auto module = parser.Parse();
 
-    if(!module.has_value()){
+    if (!module.has_value()) {
       std::cout << "failed to parse \n";
     }
 
-    if(HIL){
+    if (HIL) {
       std::error_code err;
-      llvm::raw_fd_ostream  output(OutputFile, err);
+      llvm::raw_fd_ostream output(OutputFile, err);
       module->print(output);
-    }
-    else{
+    } else {
       std::cout << "parsed file, set OutputHIL to get the HIL \n";
     }
   }

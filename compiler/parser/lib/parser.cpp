@@ -123,10 +123,10 @@ public:
 mlir::Location Parser::Location() { return builder.getUnknownLoc(); }
 
 Parser::Parser(const std::vector<Token> &tokens, mlir::MLIRContext *context,
-               const std::string &filename, const std::string &file_text)
+               const std::string &filename, const std::string &file_text, bool debug)
     : tokens(tokens), context(context), builder(context),
       theModule(mlir::ModuleOp::create(builder.getUnknownLoc())),
-      filename(filename), file_text(file_text) {
+      filename(filename), file_text(file_text), debug(debug) {
   context->loadDialect<mlir::hlir::HLIRDialect>();
 }
 
@@ -148,7 +148,7 @@ void Parser::ReportError(const std::string &msg, std::filesystem::path filepath,
 }
 
 DebugStream Parser::ReportLog(std::string filename, int lineNumber) {
-  return DebugStream(debug_enabled, filename, lineNumber);
+  return DebugStream(debug, filename, lineNumber);
 }
 
 bool Parser::Expect(TokenType t) {
