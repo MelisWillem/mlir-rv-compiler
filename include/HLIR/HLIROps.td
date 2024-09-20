@@ -20,6 +20,29 @@ def ConstantOp : HLIR_Op<"Constant">{
   let results = (outs AnyTypeOf<[I32, I1]>:$value);
 }
 
+def AllocaOp : HLIR_Op<"alloca">{
+  let arguments = (ins 
+    TypeAttr:$allocaType,
+    StrAttr:$name
+  );
+
+  let results = (outs HLIR_PtrType:$ptr);
+}
+
+def Store : HLIR_Op<"Store">{
+  let arguments = (ins 
+    AnyType:$value,
+    HLIR_PtrType:$ptr
+  );
+}
+
+def Load : HLIR_Op<"Load">{
+  let arguments = (ins 
+    HLIR_PtrType:$ptr
+  );
+  let results =(outs AnyType:$value);
+}
+
 def CallOp : HLIR_Op<"Call">{
   let arguments = (ins FlatSymbolRefAttr:$sym_name);
 }
@@ -61,6 +84,10 @@ def ReturnOp : HLIR_Op<"Return", [Terminator]>{ // maybe also add ReturnLike fro
 
 def ForOp : HLIR_Op<"For">{
   let regions = (region AnyRegion:$body);
+}
+
+def YieldOp : HLIR_Op<"Yield", [Terminator]>{ // maybe also add ReturnLike from ControlFlowInterfaces.td
+  let arguments = (outs Variadic<AnyType>:$operand);
 }
 
 #endif // HLIR_OPS

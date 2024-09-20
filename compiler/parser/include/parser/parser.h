@@ -7,6 +7,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Types.h"
 #include "token/tokens.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/StringRef.h"
@@ -27,7 +28,9 @@ class SymbolTable {
 public:
   class scope {
     std::string name;
-    std::map<std::string, mlir::Value> symbols;
+    // Symbols contains the address of the value.
+    // Due to opaque pointers we need to keep track of the type seperatly.
+    std::map<std::string, std::pair<mlir::Value, mlir::Type>> symbols;
 
   public:
     scope() : name("default"), symbols() {}
@@ -35,7 +38,7 @@ public:
 
     std::string Name() const { return name; }
 
-    std::optional<mlir::Value> Lookup(const std::string &val) const {
+    std::optional<std::pair<mlir::Value, mlir::Type>> Lookup(const std::string &val) const {
       const auto sIt = symbols.find(val);
       if (sIt != symbols.end()) {
         return sIt->second;
@@ -44,15 +47,17 @@ public:
       return {}; // can't find it
     }
 
-    void Insert(const std::string &name, mlir::Value val) {
-      symbols.insert({name, val});
+    void Insert(const std::string &name, mlir::Value val, mlir::Type elementType) {
+      symbols.insert({name, {val, elementType}});
     }
 
-    bool Update(const std::string &name, mlir::Value val) {
-      if (symbols.find(name) == symbols.end()) {
+    bool Update(const std::string &name, mlir::Value val, mlir::Type elementType) {
+      auto symbolIt = symbols.find(name);
+      if (symbolIt == symbols.end()) {
         return false; // can't update, symbol is not in the symbol table.
       }
-      symbols[name] = val;
+      assert(symbolIt->second.second == elementType && "cannot update a symbol to a new type");
+      symbols[name] = {val, elementType};
       return true;
     }
   };
@@ -65,19 +70,18 @@ public:
   SymbolTable(const SymbolTable &) =
       delete; // do not allow copy, symboltable should only exist once.
 
-  std::optional<mlir::Value> Lookup(const std::string &name) const;
-  void Insert(const std::string &name, mlir::Value val);
+  std::optional<std::pair<mlir::Value, mlir::Type>> Lookup(const std::string &name) const;
+  void Insert(const std::string &name, mlir::Value val, mlir::Type elementType);
   void PopScope();
   scope CurrentScope() const;
   void InsertScope(const std::string &name);
-  bool UpdateSymbol(const std::string &name, mlir::Value val);
+  bool UpdateSymbol(const std::string &name, mlir::Value val, mlir::Type type);
 };
 
 using namespace tokenizer;
 class DebugStream;
 class Parser {
   const std::vector<Token> &tokens;
-  mlir::MLIRContext *context;
   mlir::OpBuilder builder;
   mlir::ModuleOp theModule;
   std::string filename;
@@ -85,7 +89,7 @@ class Parser {
 
   SymbolTable symbolTable;
 
-  int cursor;
+  int cursor = 0;
   bool debug = true;
 
   Token Consume();
@@ -109,8 +113,11 @@ public:
 private:
   mlir::Location Location();
   std::optional<mlir::hlir::FuncOp> Function();
-  std::optional<mlir::hlir::FuncOp> Prototype();
-  bool Body(mlir::Block &region);
+  std::optional<mlir::hlir::FuncOp> Prototype(std::vector<mlir::Type>& mlir_args, std::vector<std::string>& name_args);
+
+  const static std::vector<mlir::Type>  empty_mlir_args;
+  const static std::vector<std::string> empty_name_args;
+  bool Body(mlir::Region  &region, const std::vector<mlir::Type>& mlir_args=empty_mlir_args, const std::vector<std::string>& name_args=empty_name_args);
 
   std::optional<mlir::Operation *> Statement();
   bool VarDecl();
@@ -121,5 +128,6 @@ private:
   mlir::Type Type();
   std::optional<mlir::Value> UnaryExpression();
   void DeclareVar(const std::string &name, mlir::Value val);
+  std::optional<mlir::Value> LoadVar(const std::string &name);
 };
 } // namespace parser

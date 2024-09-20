@@ -7,14 +7,11 @@ include "HLIR/HLIRDialect.td"
 //===----------------------------------------------------------------------===//
 // HLIR type definitions
 //===----------------------------------------------------------------------===//
-
 class HLIR_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<HLIR_Dialect, name, traits> {
   let mnemonic = typeMnemonic;
 }
 
-// Need to add some type or the default parsers won't work.
-// Once there is one custom type in the dialect this can be removed.
-def RVIR_CustomType : HLIR_Type<"Dummy", "dummy"> {}
+def HLIR_PtrType : HLIR_Type<"Pointer", "ptr"> {}
 
 #endif // HLIR_TYPES

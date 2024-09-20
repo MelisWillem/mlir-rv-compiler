@@ -3,9 +3,7 @@
 #include "HLIR/HLIRDialect.h"
 #include "HLIR/HLIREnums.h"
 #include "HLIR/HLIROps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/IR/Attributes.h"
+#include "HLIR/HLIRTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -16,11 +14,6 @@
 #include "mlir/IR/Value.h"
 #include "token/tokens.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/Support/Debug.h"
 #include <cassert>
 #include <filesystem>
 #include <initializer_list>
@@ -28,6 +21,7 @@
 #include <ostream>
 #include <sstream>
 #include <sys/cdefs.h>
+#include <vector>
 
 using namespace tokenizer;
 
@@ -37,9 +31,10 @@ void SymbolTable::InsertScope(const std::string &name) {
   scopes.push_back({name});
 }
 
-bool SymbolTable::UpdateSymbol(const std::string &name, mlir::Value val) {
+bool SymbolTable::UpdateSymbol(const std::string &name, mlir::Value val,
+                               mlir::Type type) {
   for (auto &scope : scopes) {
-    if (scope.Update(name, val)) {
+    if (scope.Update(name, val, type)) {
       return true;
     }
   }
@@ -66,7 +61,8 @@ SymbolTable::scope SymbolTable::CurrentScope() const {
   return scopes.back();
 }
 
-std::optional<mlir::Value> SymbolTable::Lookup(const std::string &name) const {
+std::optional<std::pair<mlir::Value, mlir::Type>>
+SymbolTable::Lookup(const std::string &name) const {
   for (auto &scope : llvm::reverse(scopes)) {
     auto maybeSymbol = scope.Lookup(name);
     if (maybeSymbol.has_value()) {
@@ -77,9 +73,10 @@ std::optional<mlir::Value> SymbolTable::Lookup(const std::string &name) const {
   return {};
 }
 
-void SymbolTable::Insert(const std::string &name, mlir::Value val) {
+void SymbolTable::Insert(const std::string &name, mlir::Value val,
+                         mlir::Type elementType) {
   assert(!scopes.empty());
-  scopes.back().Insert(name, val);
+  scopes.back().Insert(name, val, elementType);
 }
 
 SymbolTable::SymbolTable() { scopes.push_back({}); }
@@ -120,11 +117,15 @@ public:
       : std::ostream(&buf), buf(file, linenumber, enable) {}
 };
 
+const std::vector<mlir::Type> Parser::empty_mlir_args = {};
+const std::vector<std::string> Parser::empty_name_args = {};
+
 mlir::Location Parser::Location() { return builder.getUnknownLoc(); }
 
 Parser::Parser(const std::vector<Token> &tokens, mlir::MLIRContext *context,
-               const std::string &filename, const std::string &file_text, bool debug)
-    : tokens(tokens), context(context), builder(context),
+               const std::string &filename, const std::string &file_text,
+               bool debug)
+    : tokens(tokens), builder(context),
       theModule(mlir::ModuleOp::create(builder.getUnknownLoc())),
       filename(filename), file_text(file_text), debug(debug) {
   context->loadDialect<mlir::hlir::HLIRDialect>();
@@ -203,7 +204,9 @@ bool Parser::IsFinal() const {
 }
 
 std::optional<mlir::ModuleOp> Parser::Parse() {
-  Log() << "Parse ModuleOp";
+  Log() << "Parse ModuleOp with " << tokens.size() << " token.\n";
+
+  builder.setInsertionPointToEnd(theModule.getBody());
 
   // consume 1 token -> switch...
   while (!IsFinal()) {
@@ -237,16 +240,16 @@ mlir::Type Parser::Type() {
 
 std::optional<mlir::hlir::FuncOp> Parser::Function() {
   Log() << "Parse Function";
-  // builder.setInsertionPoint(theModule);
   ScopeGuard sg(symbolTable, "function");
-  builder.setInsertionPointToEnd(theModule.getBody());
 
-  auto func = Prototype();
+  std::vector<mlir::Type> mlir_args;
+  std::vector<std::string> name_args;
+  auto func = Prototype(mlir_args, name_args);
   if (!func.has_value()) {
     return {};
   }
-
-  if (!Body(func->getRegion().front())) {
+  auto &function_block = func->getRegion();
+  if (!Body(function_block, mlir_args, name_args)) {
     return {};
   }
 
@@ -254,7 +257,9 @@ std::optional<mlir::hlir::FuncOp> Parser::Function() {
   return func;
 }
 
-std::optional<mlir::hlir::FuncOp> Parser::Prototype() {
+std::optional<mlir::hlir::FuncOp>
+Parser::Prototype(std::vector<mlir::Type> &mlir_args,
+                  std::vector<std::string> &name_args) {
   Log() << "Parsing prototype ";
   // example: "func food(bar:int)"
   // is the func already consumed by the outer loop?
@@ -268,8 +273,6 @@ std::optional<mlir::hlir::FuncOp> Parser::Prototype() {
   }
   Consume();
 
-  llvm::SmallVector<mlir::Type, 4> mlir_args;
-  llvm::SmallVector<std::string> name_args;
   while (Peek().type == TokenType::IDENTIFIER) {
     auto argName = Consume().strData();
     name_args.push_back(argName);
@@ -310,22 +313,26 @@ std::optional<mlir::hlir::FuncOp> Parser::Prototype() {
       builder.getUnknownLoc(), name, funcType, arg_attrs, return_attrs);
   Log() << "created FuncOp from prototype";
 
-  // add the init block with the arguments on it
-  auto &region = funcOp.getRegion();
-  auto *block = builder.createBlock(&region);
+  return funcOp;
+}
 
-  for (auto [name, type] : zip(name_args, mlir_args)) {
+bool Parser::Body(mlir::Region &region,
+                  const std::vector<mlir::Type> &mlir_args,
+                  const std::vector<std::string> &name_args) {
+  Log() << "Parsing block";
+  auto *old_insert_block = builder.getBlock();
+  auto block = builder.createBlock(&region);
+
+  for (auto [name, type] : llvm::zip(name_args, mlir_args)) {
     auto arg = block->addArgument(type, Location());
     Log() << "add arg:";
     DeclareVar(name, arg);
   }
-  Log() << "Added arguments to block an symbol table.";
+  Log() << "Added arguments to block and symbol table.";
 
-  return funcOp;
-}
-
-bool Parser::Body(mlir::Block &block) {
-  Log() << "Parsing block";
+  builder.setInsertionPointToEnd(block);
+  Log() << "block before=" << old_insert_block << "\n";
+  Log() << "block while=" << block << "\n";
   if (Peek().type != TokenType::OPEN_CURLY) {
     Error("Expected open curly braces to start block.");
     return false;
@@ -346,6 +353,9 @@ bool Parser::Body(mlir::Block &block) {
     Error("Blocks should end with }.");
   }
 
+  builder.setInsertionPointToEnd(old_insert_block);
+
+  Log() << "block after=" << builder.getBlock() << "\n";
   return true;
 }
 
@@ -365,8 +375,7 @@ std::optional<mlir::hlir::IfOp> Parser::IfStatement() {
   auto IfStmt = builder.create<mlir::hlir::IfOp>(Location(), *cond);
 
   ScopeGuard sg{symbolTable, "ifexpr"};
-  auto block = builder.createBlock(&IfStmt.getRegion());
-  Body(*block);
+  Body(IfStmt.getRegion());
   return {IfStmt};
 }
 
@@ -421,7 +430,7 @@ bool Parser::VarDecl() {
     return false;
   }
 
-  symbolTable.Insert(identifier_name, *expr);
+  DeclareVar(identifier_name, *expr);
   return true;
 }
 
@@ -471,14 +480,17 @@ std::optional<mlir::Operation *> Parser::Statement() {
     auto rhs = Expression();
     if (!Expect(TokenType::SEMI_COLON)) {
       Error("Assign should end with semi colon");
+      return {};
     }
     // if the symbol doesnt exist we cant set it.
-    if (!symbolTable.Lookup(identifierToken.strData()).has_value()) {
+    auto maybeSymbol = symbolTable.Lookup(identifierToken.strData());
+    if (!maybeSymbol.has_value()) {
       Log() << "redefinition of symbol:" << identifierToken.strData();
       Error("Already defined symbol");
+      return {};
     }
-    symbolTable.UpdateSymbol(identifierToken.strData(), *rhs);
-    return {};
+    auto [_, type] = *maybeSymbol;
+    symbolTable.UpdateSymbol(identifierToken.strData(), *rhs, type);
     break;
   }
   case TokenType::SEMI_COLON: {
@@ -536,7 +548,7 @@ std::optional<mlir::Value> Parser::UnaryExpression() {
   auto token = Consume();
   switch (token.type) {
   case TokenType::IDENTIFIER: {
-    return symbolTable.Lookup(token.strData());
+    return LoadVar(token.strData());
   } break;
   case TokenType::NUMBER: {
     return builder.create<mlir::hlir::ConstantOp>(
@@ -593,8 +605,28 @@ std::optional<mlir::Value> Parser::Expression(int precidence) {
 }
 
 void Parser::DeclareVar(const std::string &name, mlir::Value val) {
-  Log() << "Declare variable name=" << name;
-  symbolTable.Insert(name, val);
+  Log() << "Declare variable name=" << name << "\n";
+  auto type = val.getType();
+  auto ptr_type = mlir::hlir::PointerType::get(builder.getContext());
+  auto addr =
+      builder.create<mlir::hlir::AllocaOp>(Location(), ptr_type, type, name)
+          .getResult();
+  builder.create<mlir::hlir::Store>(Location(), val, addr);
+
+  symbolTable.Insert(name, addr, type);
+}
+
+std::optional<mlir::Value> Parser::LoadVar(const std::string &name) {
+  Log() << "Loading variable: " << name << "\n";
+  auto maybe_addr = symbolTable.Lookup(name);
+  if (!maybe_addr.has_value()) {
+    Error(std::string("cant find variable") + name);
+    return {};
+  }
+
+  // todo: fix type here
+  return builder.create<mlir::hlir::Load>(Location(), maybe_addr->first.getType(),
+                                          maybe_addr->first);
 }
 
 } // namespace parser
