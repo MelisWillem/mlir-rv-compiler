@@ -625,7 +625,7 @@ std::optional<mlir::Value> Parser::LoadVar(const std::string &name) {
   }
 
   // todo: fix type here
-  return builder.create<mlir::hlir::Load>(Location(), maybe_addr->first.getType(),
+  return builder.create<mlir::hlir::Load>(Location(), maybe_addr->second,
                                           maybe_addr->first);
 }
 

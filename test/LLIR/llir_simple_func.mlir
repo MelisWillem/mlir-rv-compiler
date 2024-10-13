@@ -1,3 +1,4 @@
+// RUN: rv-opt %s -HLIR-LLIR > %t.mlir
 module {
   "hlir.func"() <{arg_attrs = [], function_type = (i32, i1) -> i32, res_attrs = [], sym_name = "foo"}> ({
   ^bb0(%arg0: i32, %arg1: i1):

@@ -1,3 +1,4 @@
+#include "HLIR/HLIRDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
@@ -15,7 +16,7 @@ int main(int argc, char **argv) {
   mlir::llir::registerPasses();
 
   mlir::DialectRegistry registry;
-  registry.insert<mlir::rvir::RVIRDialect, mlir::llir::LLIRDialect,
+  registry.insert<mlir::rvir::RVIRDialect, mlir::llir::LLIRDialect, mlir::hlir::HLIRDialect,
                   mlir::arith::ArithDialect, mlir::func::FuncDialect>();
 
   return mlir::asMainReturnCode(
