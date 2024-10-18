@@ -248,8 +248,8 @@ std::optional<mlir::hlir::FuncOp> Parser::Function() {
   if (!func.has_value()) {
     return {};
   }
-  auto &function_block = func->getRegion();
-  if (!Body(function_block, mlir_args, name_args)) {
+  auto &function_region = func->getRegion();
+  if (!Body(builder.createBlock(&function_region), mlir_args, name_args)) {
     return {};
   }
 
@@ -316,12 +316,11 @@ Parser::Prototype(std::vector<mlir::Type> &mlir_args,
   return funcOp;
 }
 
-bool Parser::Body(mlir::Region &region,
+bool Parser::Body(mlir::Block* block,
                   const std::vector<mlir::Type> &mlir_args,
                   const std::vector<std::string> &name_args) {
   Log() << "Parsing block";
   auto *old_insert_block = builder.getBlock();
-  auto block = builder.createBlock(&region);
 
   for (auto [name, type] : llvm::zip(name_args, mlir_args)) {
     auto arg = block->addArgument(type, Location());
@@ -372,10 +371,22 @@ std::optional<mlir::hlir::IfOp> Parser::IfStatement() {
     return {};
   }
   Log() << "Create If statement without block";
-  auto IfStmt = builder.create<mlir::hlir::IfOp>(Location(), *cond);
+  auto* current_block = builder.getBlock();
+
+  auto* trueBlock = builder.createBlock(current_block->getParent());
+  // The true block needs to be before the false block so we get a fallthrough.
+  auto* falseBlock = builder.createBlock(current_block->getParent());
+  
+  builder.setInsertionPointToEnd(current_block);
+  auto IfStmt = builder.create<mlir::hlir::IfOp>(Location(), *cond, trueBlock, falseBlock);
 
   ScopeGuard sg{symbolTable, "ifexpr"};
-  Body(IfStmt.getRegion());
+
+  builder.setInsertionPointToEnd(trueBlock);
+  Body(IfStmt.getTrueDest());
+
+  builder.setInsertionPointToEnd(IfStmt.getFalseDest());
+  // there is no else, but the code after the if should go in the false block
   return {IfStmt};
 }
 

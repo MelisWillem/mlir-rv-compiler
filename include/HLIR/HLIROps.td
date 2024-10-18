@@ -67,10 +67,11 @@ def CompareOp : HLIR_Op<"Compare">{
   let results = (outs I1:$res);
 }
 
-def IfOp : HLIR_Op<"If">{
+def IfOp : HLIR_Op<"If", [Terminator]>{
   let arguments = (ins I1:$cond);
-
-  let regions = (region AnyRegion:$body);
+  let successors = (successor 
+    AnySuccessor:$trueDest,
+    AnySuccessor:$falseDest);
 }
 
 // How to connect if and else?(should we even do it?)

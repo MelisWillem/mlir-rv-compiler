@@ -117,7 +117,7 @@ private:
 
   const static std::vector<mlir::Type>  empty_mlir_args;
   const static std::vector<std::string> empty_name_args;
-  bool Body(mlir::Region  &region, const std::vector<mlir::Type>& mlir_args=empty_mlir_args, const std::vector<std::string>& name_args=empty_name_args);
+  bool Body(mlir::Block*  block, const std::vector<mlir::Type>& mlir_args=empty_mlir_args, const std::vector<std::string>& name_args=empty_name_args);
 
   std::optional<mlir::Operation *> Statement();
   bool VarDecl();
