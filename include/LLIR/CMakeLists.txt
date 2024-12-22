@@ -7,9 +7,3 @@ add_mlir_doc(LLIRDialect LLIRDialect LLIR/ -gen-dialect-doc)
 set(LLVM_TARGET_DEFINITIONS LLIRPasses.td)
 mlir_tablegen(LLIRPasses.h.inc --gen-pass-decls)
 add_public_tablegen_target(MLIRLLIRPassesIncGen)
-
-# generate pdll files
-add_mlir_pdll_library(MLIRHLIIRPDLLPatternsIncGen
-  HLIRToLLIR.pdll
-  HLIRToLLIR.inc.h
-  )

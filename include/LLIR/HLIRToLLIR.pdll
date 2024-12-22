@@ -1,8 +1,0 @@
-#include"LLIROps.td"
-#include"HLIROps.td"
-
-Pattern {
-  let root = op<hlir.If>(cond: Value);
-  
-  replace root with op<cf.cond_br>(cond);
-} 

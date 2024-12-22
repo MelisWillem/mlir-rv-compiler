@@ -12,4 +12,10 @@ include "mlir/IR/CommonTypeConstraints.td"
 //     let arguments = (ins I1:$cond);
 // }
 
+def ConstantOp : LLIR_Op<"Constant">{
+  let arguments = (ins AnyAttrOf<[I1Attr, I32Attr]>:$constant);
+
+  let results = (outs AnyTypeOf<[I32, I1]>:$value);
+}
+
 #endif // LLIR_OPS
