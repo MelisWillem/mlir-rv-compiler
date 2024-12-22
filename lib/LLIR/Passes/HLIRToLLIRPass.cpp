@@ -3,6 +3,7 @@
 #include "HLIR/HLIROps.h"
 #include "LLIR/LLIROps.h"
 #include "llvm/Support/Debug.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
@@ -19,12 +20,14 @@ namespace mlir::llir {
 #include "LLIR/LLIRPasses.h.inc"
 
 static LogicalResult MapOperation(Operation& op, mlir::OpBuilder& builder){
+  builder.setInsertionPoint(&op);
   return mlir::TypeSwitch<Operation&, LogicalResult> (op)
     .Case<hlir::ConstantOp>([&builder](hlir::ConstantOp op){
       builder.create<ConstantOp>(op.getLoc(), op.getResult().getType(), op.getConstant());
       return LogicalResult::success();
       })
-    .Case<hlir::FuncOp>([](hlir::FuncOp funcOp){
+    .Case<func::FuncOp>([](func::FuncOp funcOp){
+        // functions stay the same
         return LogicalResult::success();
     })
     .Case<hlir::Load>([](hlir::Load load){

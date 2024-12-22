@@ -4,6 +4,7 @@
 #include "HLIR/HLIREnums.h"
 #include "HLIR/HLIROps.h"
 #include "HLIR/HLIRTypes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -128,7 +129,7 @@ Parser::Parser(const std::vector<Token> &tokens, mlir::MLIRContext *context,
     : tokens(tokens), builder(context),
       theModule(mlir::ModuleOp::create(builder.getUnknownLoc())),
       filename(filename), file_text(file_text), debug(debug) {
-  context->loadDialect<mlir::hlir::HLIRDialect>();
+  context->loadDialect<mlir::hlir::HLIRDialect, mlir::func::FuncDialect>();
 }
 
 #define Error(msg) ReportError(msg, __FILE__, __LINE__)
@@ -238,7 +239,7 @@ mlir::Type Parser::Type() {
   }
 }
 
-std::optional<mlir::hlir::FuncOp> Parser::Function() {
+std::optional<mlir::func::FuncOp> Parser::Function() {
   Log() << "Parse Function";
   ScopeGuard sg(symbolTable, "function");
 
@@ -257,7 +258,7 @@ std::optional<mlir::hlir::FuncOp> Parser::Function() {
   return func;
 }
 
-std::optional<mlir::hlir::FuncOp>
+std::optional<mlir::func::FuncOp>
 Parser::Prototype(std::vector<mlir::Type> &mlir_args,
                   std::vector<std::string> &name_args) {
   Log() << "Parsing prototype ";
@@ -307,10 +308,8 @@ Parser::Prototype(std::vector<mlir::Type> &mlir_args,
 
   auto funcType = builder.getFunctionType(
       mlir_args, mlir_return_type.has_value() ? *mlir_return_type : nullptr);
-  auto arg_attrs = builder.getArrayAttr({});
-  auto return_attrs = builder.getArrayAttr({});
-  auto funcOp = builder.create<mlir::hlir::FuncOp>(
-      builder.getUnknownLoc(), name, funcType, arg_attrs, return_attrs);
+  auto funcOp = builder.create<mlir::func::FuncOp>(
+      Location(), name, funcType);
   Log() << "created FuncOp from prototype";
 
   return funcOp;

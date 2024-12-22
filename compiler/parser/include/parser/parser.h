@@ -1,6 +1,7 @@
 #pragma once
 
 #include "HLIR/HLIROps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
@@ -16,10 +17,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-
-namespace mlir::hlir {
-class FuncOp;
-}
 
 namespace parser {
 
@@ -112,8 +109,8 @@ public:
 
 private:
   mlir::Location Location();
-  std::optional<mlir::hlir::FuncOp> Function();
-  std::optional<mlir::hlir::FuncOp> Prototype(std::vector<mlir::Type>& mlir_args, std::vector<std::string>& name_args);
+  std::optional<mlir::func::FuncOp> Function();
+  std::optional<mlir::func::FuncOp> Prototype(std::vector<mlir::Type>& mlir_args, std::vector<std::string>& name_args);
 
   const static std::vector<mlir::Type>  empty_mlir_args;
   const static std::vector<std::string> empty_name_args;

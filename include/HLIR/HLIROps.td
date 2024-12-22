@@ -47,20 +47,6 @@ def CallOp : HLIR_Op<"Call">{
   let arguments = (ins FlatSymbolRefAttr:$sym_name);
 }
 
-def FuncOp : HLIR_Op<"func"> {
-  let summary = "function operation";
-  let description = [{
-  }];
-
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    TypeAttrOf<FunctionType>:$function_type,
-    OptionalAttr<DictArrayAttr>:$arg_attrs,
-    OptionalAttr<DictArrayAttr>:$res_attrs
-  );
-  let regions = (region AnyRegion:$body);
-}
-
 def CompareOp : HLIR_Op<"Compare">{
   let arguments = (ins CmpTypeAttr:$type, I32:$left, I32:$right);
 

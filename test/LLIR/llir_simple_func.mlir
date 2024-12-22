@@ -1,7 +1,6 @@
 // RUN: rv-opt %s -HLIR-LLIR > %t.mlir
 module {
-  "hlir.func"() <{arg_attrs = [], function_type = (i32, i1) -> i32, res_attrs = [], sym_name = "foo"}> ({
-  ^bb0(%arg0: i32, %arg1: i1):
+  func.func @foo(%arg0: i32, %arg1: i1) -> i32 {
     %0 = "hlir.alloca"() <{allocaType = i32, name = "number"}> : () -> !hlir.ptr
     "hlir.Store"(%arg0, %0) : (i32, !hlir.ptr) -> ()
     %1 = "hlir.alloca"() <{allocaType = i1, name = "flag"}> : () -> !hlir.ptr
@@ -22,5 +21,5 @@ module {
   ^bb4:  // pred: ^bb2
     %8 = "hlir.Constant"() <{constant = -1 : i32}> : () -> i32
     "hlir.Return"(%8) : (i32) -> ()
-  }) : () -> ()
+  }
 }
