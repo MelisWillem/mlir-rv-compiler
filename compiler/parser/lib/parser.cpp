@@ -4,6 +4,7 @@
 #include "HLIR/HLIREnums.h"
 #include "HLIR/HLIROps.h"
 #include "HLIR/HLIRTypes.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -129,7 +130,10 @@ Parser::Parser(const std::vector<Token> &tokens, mlir::MLIRContext *context,
     : tokens(tokens), builder(context),
       theModule(mlir::ModuleOp::create(builder.getUnknownLoc())),
       filename(filename), file_text(file_text), debug(debug) {
-  context->loadDialect<mlir::hlir::HLIRDialect, mlir::func::FuncDialect>();
+  context->loadDialect<
+    mlir::hlir::HLIRDialect,
+    mlir::func::FuncDialect,
+    mlir::cf::ControlFlowDialect>();
 }
 
 #define Error(msg) ReportError(msg, __FILE__, __LINE__)
@@ -357,7 +361,7 @@ bool Parser::Body(mlir::Block* block,
   return true;
 }
 
-std::optional<mlir::hlir::IfOp> Parser::IfStatement() {
+std::optional<mlir::cf::CondBranchOp> Parser::IfStatement() {
   Log() << "Parsing if statement";
   if (Peek().type != TokenType::IF) {
     Error("Expected if statement.");
@@ -377,16 +381,22 @@ std::optional<mlir::hlir::IfOp> Parser::IfStatement() {
   auto* falseBlock = builder.createBlock(current_block->getParent());
   
   builder.setInsertionPointToEnd(current_block);
-  auto IfStmt = builder.create<mlir::hlir::IfOp>(Location(), *cond, trueBlock, falseBlock);
+  auto condBr = builder.create<mlir::cf::CondBranchOp>(
+      Location(),
+      *cond,
+      trueBlock,
+      mlir::ValueRange(),
+      falseBlock,
+      mlir::ValueRange());
 
   ScopeGuard sg{symbolTable, "ifexpr"};
 
   builder.setInsertionPointToEnd(trueBlock);
-  Body(IfStmt.getTrueDest());
+  Body(condBr.getTrueDest());
 
-  builder.setInsertionPointToEnd(IfStmt.getFalseDest());
+  builder.setInsertionPointToEnd(condBr.getFalseDest());
   // there is no else, but the code after the if should go in the false block
-  return {IfStmt};
+  return {condBr};
 }
 
 bool Parser::VarDecl() {

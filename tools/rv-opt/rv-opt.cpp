@@ -1,4 +1,5 @@
 #include "HLIR/HLIRDialect.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
@@ -16,7 +17,13 @@ int main(int argc, char **argv) {
   mlir::llir::registerPasses();
 
   mlir::DialectRegistry registry;
-  registry.insert<mlir::rvir::RVIRDialect, mlir::llir::LLIRDialect, mlir::hlir::HLIRDialect, mlir::arith::ArithDialect, mlir::func::FuncDialect>();
+  registry.insert<
+    mlir::rvir::RVIRDialect,
+    mlir::llir::LLIRDialect,
+    mlir::hlir::HLIRDialect,
+    mlir::arith::ArithDialect,
+    mlir::func::FuncDialect,
+    mlir::cf::ControlFlowDialect>();
 
   return mlir::asMainReturnCode(
       mlir::MlirOptMain(argc, argv, "RVIR optimizer driver\n", registry));

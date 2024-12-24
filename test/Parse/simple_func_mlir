@@ -7,13 +7,13 @@ module {
     %2 = "hlir.Load"(%0) : (!hlir.ptr) -> i32
     %3 = "hlir.Constant"() <{constant = 23 : i32}> : () -> i32
     %4 = "hlir.Compare"(%2, %3) <{type = #hlir<CmpType greather>}> : (i32, i32) -> i1
-    "hlir.If"(%4)[^bb1, ^bb2] : (i1) -> ()
+    cf.cond_br %4, ^bb1, ^bb2
   ^bb1:  // pred: ^bb0
     %5 = "hlir.Load"(%0) : (!hlir.ptr) -> i32
     "hlir.Return"(%5) : (i32) -> ()
   ^bb2:  // pred: ^bb0
     %6 = "hlir.Load"(%1) : (!hlir.ptr) -> i1
-    "hlir.If"(%6)[^bb3, ^bb4] : (i1) -> ()
+    cf.cond_br %6, ^bb3, ^bb4
   ^bb3:  // pred: ^bb2
     %7 = "hlir.Constant"() <{constant = 1 : i32}> : () -> i32
     "hlir.Return"(%7) : (i32) -> ()

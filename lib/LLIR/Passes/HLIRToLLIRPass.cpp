@@ -4,6 +4,7 @@
 #include "LLIR/LLIROps.h"
 #include "llvm/Support/Debug.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
@@ -22,39 +23,11 @@ namespace mlir::llir {
 static LogicalResult MapOperation(Operation& op, mlir::OpBuilder& builder){
   builder.setInsertionPoint(&op);
   return mlir::TypeSwitch<Operation&, LogicalResult> (op)
-    .Case<hlir::ConstantOp>([&builder](hlir::ConstantOp op){
-      builder.create<ConstantOp>(op.getLoc(), op.getResult().getType(), op.getConstant());
+    .Case<hlir::ConstantOp>([](hlir::ConstantOp op){
       return LogicalResult::success();
       })
-    .Case<func::FuncOp>([](func::FuncOp funcOp){
-        // functions stay the same
-        return LogicalResult::success();
-    })
-    .Case<hlir::Load>([](hlir::Load load){
-        return LogicalResult::success();
-      })
-    .Case<hlir::Store>([](hlir::Store store){
-        return LogicalResult::success();
-      })
-    .Case<hlir::CompareOp>([](hlir::CompareOp cmp){
-        return LogicalResult::success();
-      })
-    .Case<hlir::IfOp>([](hlir::IfOp ifOp){
-        return LogicalResult::success();
-      })
-    .Case<hlir::ReturnOp>([](hlir::ReturnOp returnOp){
-        return LogicalResult::success();
-      })
-    .Case<hlir::AllocaOp>([](hlir::AllocaOp alloca){
-        return LogicalResult::success();
-      })
-    .Case<ModuleOp>([](ModuleOp module){
-        // Modules are already builtin, no need to map.
-        return LogicalResult::success();
-      })
     .Default([](mlir::Operation& op){
-      llvm::errs() << "can't translate from hlir->llir op: " << op << "\n";
-      return LogicalResult::failure();
+      return LogicalResult::success();
       });
 }
 

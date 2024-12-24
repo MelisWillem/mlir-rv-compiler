@@ -2,6 +2,7 @@
 
 #include "HLIR/HLIROps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
@@ -118,7 +119,7 @@ private:
 
   std::optional<mlir::Operation *> Statement();
   bool VarDecl();
-  std::optional<mlir::hlir::IfOp> IfStatement();
+  std::optional<mlir::cf::CondBranchOp> IfStatement();
   std::optional<mlir::Value> Expression(int precedence = -1);
   mlir::Value CreateBinaryOperator(const Token &OperatorToken, mlir::Value lhs,
                                    mlir::Value rhs);

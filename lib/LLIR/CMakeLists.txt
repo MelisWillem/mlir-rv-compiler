@@ -14,6 +14,7 @@ add_mlir_dialect_library(LLIR
         MLIRIR
         MLIRInferTypeOpInterface
         MLIRFuncDialect
+        MLIRControlFlowDialect
         LLIRPasses
         )
 
