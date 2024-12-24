@@ -7,7 +7,7 @@ module {
     "hlir.Store"(%arg1, %1) : (i1, !hlir.ptr) -> ()
     %2 = "hlir.Load"(%0) : (!hlir.ptr) -> i32
     %3 = "hlir.Constant"() <{constant = 23 : i32}> : () -> i32
-    %4 = "hlir.Compare"(%2, %3) <{type = #hlir<CmpType greather>}> : (i32, i32) -> i1
+    %4 = arith.cmpi sgt, %2, %3 : i32
     cf.cond_br %4, ^bb1, ^bb2
   ^bb1:  // pred: ^bb0
     %5 = "hlir.Load"(%0) : (!hlir.ptr) -> i32

@@ -47,17 +47,6 @@ def CallOp : HLIR_Op<"Call">{
   let arguments = (ins FlatSymbolRefAttr:$sym_name);
 }
 
-def CompareOp : HLIR_Op<"Compare">{
-  let arguments = (ins CmpTypeAttr:$type, I32:$left, I32:$right);
-
-  let results = (outs I1:$res);
-}
-
-// How to connect if and else?(should we even do it?)
-def ElsOp : HLIR_Op<"else">{
-  let regions = (region AnyRegion:$body);
-}
-
 def ReturnOp : HLIR_Op<"Return", [Terminator]>{ // maybe also add ReturnLike from ControlFlowInterfaces.td
   let arguments = (outs Optional<AnyType>:$operand);
 }

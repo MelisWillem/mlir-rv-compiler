@@ -5,6 +5,7 @@
 #include "HLIR/HLIROps.h"
 #include "HLIR/HLIRTypes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -532,32 +533,35 @@ std::optional<mlir::Operation *> Parser::Statement() {
 mlir::Value Parser::CreateBinaryOperator(const Token &OperatorToken,
                                          mlir::Value lhs, mlir::Value rhs) {
   using namespace mlir::hlir;
+  using namespace mlir::arith;
   if (OperatorToken.isCmp()) {
-    // CmpTypeAttr
-    CmpType type;
+    CmpIPredicate type;
     switch (OperatorToken.type) {
     case TokenType::GREATER:
-      type = CmpType::greather;
+      type = CmpIPredicate::sgt;
       break;
     case TokenType::SMALLER:
-      type = CmpType::smaller;
+      type = CmpIPredicate::slt;
       break;
     case TokenType::GREATER_EQUAL:
-      type = CmpType::eqgreather;
+      type = CmpIPredicate::sgt;
       break;
     case TokenType::SMALLER_EQUAL:
-      type = CmpType::eqsmaller;
+      type = CmpIPredicate::sle;
       break;
     case TokenType::EQUAL:
-      type = CmpType::equal;
+      type = CmpIPredicate::eq;
       break;
     default:
       Error("Unsupported compare operation.");
       return nullptr;
     }
-    return builder.create<mlir::hlir::CompareOp>(
-        Location(), builder.getI1Type(),
-        builder.getAttr<mlir::hlir::CmpTypeAttr>(type), lhs, rhs);
+    return builder.create<mlir::arith::CmpIOp>(
+      Location(),
+      builder.getI1Type(), // compare operation always retuns bool(1 bit int)
+      type,
+      lhs,
+      rhs);
   }
   Error("Unsupported binary operation.");
   return nullptr;
