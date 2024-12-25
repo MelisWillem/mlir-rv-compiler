@@ -14,12 +14,6 @@ include "HLIRAttributes.td"
 class HLIR_Op<string mnemonic, list<Trait> traits = []> :
         Op<HLIR_Dialect, mnemonic, traits>;
 
-def ConstantOp : HLIR_Op<"Constant">{
-  let arguments = (ins AnyAttrOf<[I1Attr, I32Attr]>:$constant);
-
-  let results = (outs AnyTypeOf<[I32, I1]>:$value);
-}
-
 def AllocaOp : HLIR_Op<"alloca">{
   let arguments = (ins 
     TypeAttr:$allocaType,

@@ -6,20 +6,20 @@ module {
     %1 = "hlir.alloca"() <{allocaType = i1, name = "flag"}> : () -> !hlir.ptr
     "hlir.Store"(%arg1, %1) : (i1, !hlir.ptr) -> ()
     %2 = "hlir.Load"(%0) : (!hlir.ptr) -> i32
-    %3 = "hlir.Constant"() <{constant = 23 : i32}> : () -> i32
-    %4 = arith.cmpi sgt, %2, %3 : i32
-    cf.cond_br %4, ^bb1, ^bb2
+    %c23_i32 = arith.constant 23 : i32
+    %3 = arith.cmpi sgt, %2, %c23_i32 : i32
+    cf.cond_br %3, ^bb1, ^bb2
   ^bb1:  // pred: ^bb0
-    %5 = "hlir.Load"(%0) : (!hlir.ptr) -> i32
-    "hlir.Return"(%5) : (i32) -> ()
+    %4 = "hlir.Load"(%0) : (!hlir.ptr) -> i32
+    "hlir.Return"(%4) : (i32) -> ()
   ^bb2:  // pred: ^bb0
-    %6 = "hlir.Load"(%1) : (!hlir.ptr) -> i1
-    cf.cond_br %6, ^bb3, ^bb4
+    %5 = "hlir.Load"(%1) : (!hlir.ptr) -> i1
+    cf.cond_br %5, ^bb3, ^bb4
   ^bb3:  // pred: ^bb2
-    %7 = "hlir.Constant"() <{constant = 1 : i32}> : () -> i32
-    "hlir.Return"(%7) : (i32) -> ()
+    %c1_i32 = arith.constant 1 : i32
+    "hlir.Return"(%c1_i32) : (i32) -> ()
   ^bb4:  // pred: ^bb2
-    %8 = "hlir.Constant"() <{constant = -1 : i32}> : () -> i32
-    "hlir.Return"(%8) : (i32) -> ()
+    %c-1_i32 = arith.constant -1 : i32
+    "hlir.Return"(%c-1_i32) : (i32) -> ()
   }
 }

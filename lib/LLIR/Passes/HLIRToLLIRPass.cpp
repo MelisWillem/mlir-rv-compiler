@@ -23,9 +23,6 @@ namespace mlir::llir {
 static LogicalResult MapOperation(Operation& op, mlir::OpBuilder& builder){
   builder.setInsertionPoint(&op);
   return mlir::TypeSwitch<Operation&, LogicalResult> (op)
-    .Case<hlir::ConstantOp>([](hlir::ConstantOp op){
-      return LogicalResult::success();
-      })
     .Default([](mlir::Operation& op){
       return LogicalResult::success();
       });

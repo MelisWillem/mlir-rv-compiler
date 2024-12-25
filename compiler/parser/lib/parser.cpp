@@ -556,9 +556,9 @@ mlir::Value Parser::CreateBinaryOperator(const Token &OperatorToken,
       Error("Unsupported compare operation.");
       return nullptr;
     }
+    // CmpIOp has the output type: typeof(lhs)
     return builder.create<mlir::arith::CmpIOp>(
       Location(),
-      builder.getI1Type(), // compare operation always retuns bool(1 bit int)
       type,
       lhs,
       rhs);
@@ -575,14 +575,18 @@ std::optional<mlir::Value> Parser::UnaryExpression() {
     return LoadVar(token.strData());
   } break;
   case TokenType::NUMBER: {
-    return builder.create<mlir::hlir::ConstantOp>(
-        loc, builder.getI32Type(), builder.getI32IntegerAttr(token.intData()));
+    return builder.create<mlir::arith::ConstantOp>(
+        loc,
+        builder.getI32Type(),
+        builder.getI32IntegerAttr(token.intData()));
   } break;
   case TokenType::BOOL: {
     assert(token.intData() > -1 && token.intData() < 2 &&
            "Bool is just 1 bit, the int data should be 0 or 1");
-    return builder.create<mlir::hlir::ConstantOp>(
-        loc, builder.getI1Type(), builder.getI32IntegerAttr(token.intData()));
+    return builder.create<mlir::arith::ConstantOp>(
+        loc,
+        builder.getI1Type(),
+        builder.getBoolAttr(token.intData()));
   } break;
   default:
     Error("Expected an unary expression.");
