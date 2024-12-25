@@ -14,16 +14,16 @@ module {
   ^bb1:  // pred: ^bb0
     %c0_3 = arith.constant 0 : index
     %2 = memref.load %alloca[%c0_3] : memref<1xi32>
-    "hlir.Return"(%2) : (i32) -> ()
+    return %2 : i32
   ^bb2:  // pred: ^bb0
     %c0_4 = arith.constant 0 : index
     %3 = memref.load %alloca_0[%c0_4] : memref<1xi1>
     cf.cond_br %3, ^bb3, ^bb4
   ^bb3:  // pred: ^bb2
     %c1_i32 = arith.constant 1 : i32
-    "hlir.Return"(%c1_i32) : (i32) -> ()
+    return %c1_i32 : i32
   ^bb4:  // pred: ^bb2
     %c-1_i32 = arith.constant -1 : i32
-    "hlir.Return"(%c-1_i32) : (i32) -> ()
+    return %c-1_i32 : i32
   }
 }

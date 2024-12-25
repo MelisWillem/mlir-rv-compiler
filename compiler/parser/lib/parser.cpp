@@ -480,7 +480,7 @@ std::optional<mlir::Operation *> Parser::Statement() {
     Consume(); // return keyword
     if (Peek().type == TokenType::SEMI_COLON) {
       Consume(); // semicolon
-      return builder.create<mlir::hlir::ReturnOp>(Location(), nullptr);
+      return builder.create<mlir::func::ReturnOp>(Location());
     }
     auto returnExpr = Expression();
     if (!returnExpr.has_value()) {
@@ -491,7 +491,8 @@ std::optional<mlir::Operation *> Parser::Statement() {
     if (Peek().type != TokenType::SEMI_COLON) {
     }
     Consume(); // semicolon
-    return builder.create<mlir::hlir::ReturnOp>(Location(), *returnExpr);
+    return builder.create<mlir::func::ReturnOp>(Location(),
+        mlir::ValueRange{*returnExpr});
   }
   Log() << "Parsing lhs statement";
   if (Peek().type != TokenType::IDENTIFIER) {
