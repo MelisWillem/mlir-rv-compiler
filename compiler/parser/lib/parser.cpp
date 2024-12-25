@@ -5,18 +5,22 @@
 #include "HLIR/HLIROps.h"
 #include "HLIR/HLIRTypes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "token/tokens.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <filesystem>
 #include <initializer_list>
@@ -134,7 +138,8 @@ Parser::Parser(const std::vector<Token> &tokens, mlir::MLIRContext *context,
   context->loadDialect<
     mlir::hlir::HLIRDialect,
     mlir::func::FuncDialect,
-    mlir::cf::ControlFlowDialect>();
+    mlir::cf::ControlFlowDialect,
+    mlir::memref::MemRefDialect>();
 }
 
 #define Error(msg) ReportError(msg, __FILE__, __LINE__)
@@ -632,16 +637,27 @@ std::optional<mlir::Value> Parser::Expression(int precidence) {
   return {lhs};
 }
 
+mlir::Value Parser::MLIRIndex(int index){
+  return builder.create<mlir::arith::ConstantOp>(
+    Location(),
+    builder.getIndexType(),
+    builder.getIndexAttr(index));
+}
+
 void Parser::DeclareVar(const std::string &name, mlir::Value val) {
   Log() << "Declare variable name=" << name << "\n";
-  auto type = val.getType();
-  auto ptr_type = mlir::hlir::PointerType::get(builder.getContext());
-  auto addr =
-      builder.create<mlir::hlir::AllocaOp>(Location(), ptr_type, type, name)
-          .getResult();
-  builder.create<mlir::hlir::Store>(Location(), val, addr);
-
-  symbolTable.Insert(name, addr, type);
+  llvm::SmallVector<int64_t, 1> shape = {1};
+  auto memRefType = mlir::MemRefType::get(
+      shape,
+      val.getType());
+  auto memRef = builder.create<mlir::memref::AllocaOp>(
+      val.getLoc(), memRefType);
+  builder.create<mlir::memref::StoreOp>(
+      Location(),
+      val,
+      memRef,
+      MLIRIndex(0));
+  symbolTable.Insert(name, memRef, val.getType());
 }
 
 std::optional<mlir::Value> Parser::LoadVar(const std::string &name) {
@@ -652,9 +668,10 @@ std::optional<mlir::Value> Parser::LoadVar(const std::string &name) {
     return {};
   }
 
-  // todo: fix type here
-  return builder.create<mlir::hlir::Load>(Location(), maybe_addr->second,
-                                          maybe_addr->first);
+  return builder.create<mlir::memref::LoadOp>(
+      Location(),
+      maybe_addr->first,
+      MLIRIndex(0));
 }
 
 } // namespace parser

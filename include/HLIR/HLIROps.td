@@ -14,29 +14,6 @@ include "HLIRAttributes.td"
 class HLIR_Op<string mnemonic, list<Trait> traits = []> :
         Op<HLIR_Dialect, mnemonic, traits>;
 
-def AllocaOp : HLIR_Op<"alloca">{
-  let arguments = (ins 
-    TypeAttr:$allocaType,
-    StrAttr:$name
-  );
-
-  let results = (outs HLIR_PtrType:$ptr);
-}
-
-def Store : HLIR_Op<"Store">{
-  let arguments = (ins 
-    AnyType:$value,
-    HLIR_PtrType:$ptr
-  );
-}
-
-def Load : HLIR_Op<"Load">{
-  let arguments = (ins 
-    HLIR_PtrType:$ptr
-  );
-  let results =(outs AnyType:$value);
-}
-
 def CallOp : HLIR_Op<"Call">{
   let arguments = (ins FlatSymbolRefAttr:$sym_name);
 }

@@ -127,5 +127,6 @@ private:
   std::optional<mlir::Value> UnaryExpression();
   void DeclareVar(const std::string &name, mlir::Value val);
   std::optional<mlir::Value> LoadVar(const std::string &name);
+  mlir::Value MLIRIndex(int index);
 };
 } // namespace parser

@@ -8,4 +8,5 @@ target_link_libraries(mlir-lsp
     RVIR
     LLIR
     MLIRArithDialect
+    MLIRMemRefDialect
 )

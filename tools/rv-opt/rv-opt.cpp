@@ -1,5 +1,6 @@
 #include "HLIR/HLIRDialect.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
@@ -23,7 +24,9 @@ int main(int argc, char **argv) {
     mlir::hlir::HLIRDialect,
     mlir::arith::ArithDialect,
     mlir::func::FuncDialect,
-    mlir::cf::ControlFlowDialect>();
+    mlir::cf::ControlFlowDialect,
+    mlir::memref::MemRefDialect
+    >();
 
   return mlir::asMainReturnCode(
       mlir::MlirOptMain(argc, argv, "RVIR optimizer driver\n", registry));
