@@ -1,3 +1,8 @@
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Pass/PassRegistry.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Transforms/Passes.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "parser/parser.h"
 #include "token/tokenizer.h"
 #include "llvm/Support/CommandLine.h"
@@ -16,6 +21,12 @@ cl::opt<std::string> OutputFile("o", cl::desc("Specify output filename"),
 cl::opt<bool> debug_parser("debug_parser",
                            cl::desc("print debug output for the parser"),
                            cl::init(false));
+
+void writeToFile(mlir::ModuleOp module){
+  std::error_code err;
+  llvm::raw_fd_ostream output(OutputFile, err);
+  module.print(output);
+}
 
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
@@ -45,19 +56,29 @@ int main(int argc, char **argv) {
     std::cout << "Found " << tkz.getTokens().size() << " tokens \n";
     parser::Parser parser(tkz.getTokens(), &context, SourceFilename, SourceCode,
                           debug_parser);
-    auto module = parser.Parse();
+    auto maybeModule = parser.Parse();
 
-    if (!module.has_value()) {
+    if (!maybeModule.has_value()) {
       std::cout << "failed to parse \n";
     }
 
+    auto module = *maybeModule;
+
     if (HIL) {
-      std::error_code err;
-      llvm::raw_fd_ostream output(OutputFile, err);
-      module->print(output);
-    } else {
-      std::cout << "parsed file, set OutputHIL to get the HIL \n";
+      writeToFile(module);
+      return 0;
+    } 
+
+    auto pm = mlir::PassManager::on<mlir::ModuleOp>(&context);
+    pm.addPass(mlir::createConvertSCFToCFPass());
+    pm.addPass(mlir::createMem2Reg());
+
+    if(pm.run(module).failed()){
+      std::cerr << "Failed to compile module \n";
+      return -1;
     }
+    
+    writeToFile(module);
   }
 
   return 0;

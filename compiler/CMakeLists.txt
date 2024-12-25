@@ -6,4 +6,9 @@ add_subdirectory(tokenizer)
 add_subdirectory(parser)
 
 add_executable(cspl main.cpp)
-target_link_libraries(cspl PRIVATE LLVMSupport TokenLib ParserLib)
+target_link_libraries(cspl PRIVATE
+    LLVMSupport
+    TokenLib
+    ParserLib
+    MLIRTransforms
+    MLIRSCFToControlFlow)
