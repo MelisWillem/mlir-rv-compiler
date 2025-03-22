@@ -13,11 +13,10 @@ def RVIR_Dialect : Dialect {
     let description = [{
     }];
     let cppNamespace = "::mlir::rvir";
-
-    let useDefaultTypePrinterParser = 1;
     let extraClassDeclaration = [{
         void registerTypes();
     }];
+    let useDefaultTypePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//

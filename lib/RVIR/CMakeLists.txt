@@ -14,4 +14,7 @@ add_mlir_dialect_library(RVIR
         MLIRIR
         MLIRInferTypeOpInterface
         MLIRFuncDialect
-        )
+        RVIRPasses
+      )
+
+add_subdirectory(Passes)

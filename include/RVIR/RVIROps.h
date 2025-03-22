@@ -7,6 +7,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "RVIR/RVIRTypes.h"
 
 #define GET_OP_CLASSES
 #include "RVIR/RVIROps.h.inc"

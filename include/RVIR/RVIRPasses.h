@@ -8,7 +8,7 @@
 
 namespace mlir {
 namespace rvir {
-#define GEN_PASS_DECL
+#define GEN_PASS_DECL_TORV
 #include "RVIR/RVIRPasses.h.inc"
 
 #define GEN_PASS_REGISTRATION
