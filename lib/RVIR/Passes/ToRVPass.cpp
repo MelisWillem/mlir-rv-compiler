@@ -288,15 +288,15 @@ class ToRVPass : public impl::ToRVBase<ToRVPass> {
     // numInputs - numArgumentsInRegs != 0
 
     // fix the inputs
-    auto &initBlock = function.getBody().getBlocks().front();
-    for (std::size_t i = 0; i < initBlock.getNumArguments(); ++i) {
-      auto arg = initBlock.getArgument(i);
-      auto newArg = initBlock.insertArgument(i, inputTypes[i], arg.getLoc());
-      auto convertedArg =
-          builder.create<RegValue>(newArg.getLoc(), arg.getType(), newArg);
-      arg.replaceAllUsesWith(convertedArg);
-      initBlock.eraseArgument(i +
-                              1); // the old argument is now after the new one
+    for (auto &block : function.getBody().getBlocks()) {
+      for (std::size_t i = 0; i < block.getNumArguments(); ++i) {
+        auto arg = block.getArgument(i);
+        auto newArg = block.insertArgument(i, inputTypes[i], arg.getLoc());
+        auto convertedArg =
+            builder.create<RegValue>(newArg.getLoc(), arg.getType(), newArg);
+        arg.replaceAllUsesWith(convertedArg);
+        block.eraseArgument(i + 1); // the old argument is now after the new one
+      }
     }
 
     // fix the outputs
