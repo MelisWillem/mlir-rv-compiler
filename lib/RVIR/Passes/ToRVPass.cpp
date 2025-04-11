@@ -265,7 +265,7 @@ class ToRVPass : public impl::ToRVBase<ToRVPass> {
     std::vector<Type> resTypes;
     // for(auto resType : function.getFunctionType().getResults()){
     for (std::size_t i = 0; i < numResultsInRegs; i++) {
-      resTypes.push_back(builder.getType<rvir::RegisterType>(regIndex));
+      resTypes.push_back(builder.getType<rvir::RegisterType>(std::nullopt));
       regIndex++;
     }
 
@@ -278,7 +278,7 @@ class ToRVPass : public impl::ToRVBase<ToRVPass> {
     std::vector<rvir::RegisterType> inputTypes;
     for (std::size_t i = 0; i < numArgumentsInRegs; i++) {
       // arguments are passed in registers x10 to x17 (aka a0 to a7)
-      inputTypes.push_back(builder.getType<rvir::RegisterType>(regIndex));
+      inputTypes.push_back(builder.getType<rvir::RegisterType>(std::nullopt));
       regIndex++;
     }
     function.setFunctionType(builder.getFunctionType(
@@ -301,16 +301,14 @@ class ToRVPass : public impl::ToRVBase<ToRVPass> {
 
     // fix the outputs
     function->walk([&builder](func::ReturnOp returnOp) {
-      auto regIndex = 10;
       assert(returnOp->getOperands().size() <= 2 &&
              "No more then 2 results supported at tihs time.");
       for (auto [index, val] :
            llvm::enumerate(returnOp->getOperands().take_front(2))) {
         builder.setInsertionPointAfterValue(val);
         auto convertVal = builder.create<ValueReg>(
-            val.getLoc(), builder.getType<RegisterType>(regIndex), val);
+            val.getLoc(), builder.getType<RegisterType>(std::nullopt), val);
         returnOp.setOperand(index, convertVal);
-        regIndex++;
       }
     });
 
