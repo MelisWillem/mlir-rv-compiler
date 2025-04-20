@@ -6,46 +6,58 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
-def RVIR_FooOp : RVIR_Op<"foo", [Pure, SameOperandsAndResultType]> {
-  let summary = "Illustrates how to define an operation.";
-  let description = [{
-        The `RVIR.foo` operation illustrates how to define a new
-        operation in a dialect. It uses an operation trait to declare that it
-        has no side effects.
-
-        This operation takes an integer argument and returns an integer.
-
-        Example:
-
-        ```mlir
-        %0 = arith.constant 2 : i32
-        // Apply the foo operation to %0
-        %1 = RVIR.foo %0 : i32
-        ```
-    }];
-
-    let arguments = (ins I32:$input);
-    let results = (outs I32:$res);
-
-    let assemblyFormat = [{
-        $input attr-dict `:` type($input)
-    }];
+// Physical registers only need 5 bit identifier, but virtual ones will use 32 bit identifier.
+// reg x0-x31
+class RVIR_Inst<string mnemonic, list<Trait> traits = []> 
+: RVIR_Op<mnemonic, traits>{
+    int opcode;
 }
 
-// reg x0-x31
-def reg : I<5>;
-def pc : I<32>;
+// Represents a register value, kind of a hack to fix a register in an instruction.
+def ConstantRegOp : RVIR_Op<"Const", [Pure]>{
+    let results = (outs RegisterType:$out);
+}
 
-class RVIR_Inst<string mnemonic, list<Trait> traits = []> : RVIR_Op<mnemonic, traits>{
-    int opcode;
+def PopStack : RVIR_Op<"PopStack", [Pure]>{
+    let summary = "Pop a value from the stack";
+    let description = [{
+        Pop a value from the stack.
+    1. The stack pointer is in x2
+    2. The stack pointer is decremented by index*4bytes
+    3. The value is moved in the output register
+    }];
+    let arguments = (ins UI32Attr:$offset);
+    let results = (outs RegisterType:$output);
+}
+
+def StoreStack : RVIR_Op<"StoreStack", [Pure]>{
+    let summary = "Store a value to the stack";
+    let description = [{
+        Store a value to the stack.
+    }];
+    let arguments = (ins RegisterType:$input, UI32Attr:$offset);
+    let results = (outs RegisterType:$output);
+}
+
+def RegValue : RVIR_Op<"RegVal", [Pure]>{
+    let summary = [{
+        Read out a register to a certain type. Used when lowering to RVIR.
+    }];
+    let arguments = (ins RegisterType:$input);
+    let results = (outs AnyType);
+}
+
+def ValueReg : RVIR_Op<"ValReg", [Pure]>{
+    let arguments = (ins AnyType:$input);
+    let results = (outs RegisterType:$output);
 }
 
 // Integer register-immediate Instructions
 class RVIR_RegisterImmediateInst <string mnemonic, list<Trait> traits = []>
     : RVIR_Inst<mnemonic, traits>{
 
-    // imm: should be an attribute?
-    let arguments = (ins I32Attr:$imm, reg:$rs1, reg:$rd);
+    let arguments = (ins I32Attr:$imm, Optional<RegisterType>:$rd);
+    let results = (outs RegisterType:$rs1);
     let opcode = 19;
 
     int func3;
@@ -54,14 +66,14 @@ class RVIR_RegisterImmediateInst <string mnemonic, list<Trait> traits = []>
 def RVIR_ADDI : RVIR_RegisterImmediateInst<"ADDI">{
     let summary = "Add an immediate to a register";
     let description = [{
-        ADDI adds the si gn -
-                    extended 12 -
-                    bit immediate to register
-                        rs1.Arithmetic overflow is ignored and the result is
-                            simply the low XLEN bits of the result.ADDI rd,
+        ADDI adds the sign-extended 12-bit immediate to register rs1. 
+        Arithmetic overflow is ignored and the result is simply the low 
+        XLEN bits of the result.ADDI rd,
       rs1, 0 is used to implement the MV rd, rs1 assembler pseudoinstruction.
+
+      rd = rs1 + imm
 }];
-let func3 = 0;
+    let func3 = 0;
 }
 
 def RVIR_SLTI : RVIR_RegisterImmediateInst<"SLTI"> {
@@ -152,7 +164,7 @@ class RVIR_UTypeInst <string mnemonic, list<Trait> traits = []>
     : RVIR_Inst<mnemonic, traits>{
 
     // imm: 31:12 -> 20 bits
-    let arguments = (ins I32Attr:$imm, reg:$rd);
+    let arguments = (ins I32Attr:$imm, UI32Attr:$rd);
 }
 def RVIR_LUI : RVIR_UTypeInst<"LUI">{
     let summary = "load upper immediate";
@@ -179,7 +191,8 @@ class RVIR_RTypeInst <string mnemonic, list<Trait> traits = []>
     int func7;
     int func3;
 
-    let arguments = (ins reg:$rs1, reg:$rs2, reg:$rd);
+    let arguments = (ins RegisterType:$rs1, RegisterType:$rs2);
+    let results = (outs RegisterType:$rd);
     let opcode = 51;
 }
 
@@ -256,44 +269,49 @@ def RVIR_SRA : RVIR_RTypeInst<"SRA">{
 // TODO:Plain unconditional jumps (assembler pseudoinstruction J) are encoded as a JAL with rd=x0.
 
 // Control transfer instructions
-def RVIR_JAL : RVIR_Inst<"JAL">{
-      // imm = 20 bit offset
-      let arguments = (ins I32Attr : $imm, reg : $rd);
-      let summary = "Jump and link";
-      let description = [{
-        The jump and link (JAL) instruction uses the J-type format, where the J-immediate encodes a
-        signed offset in multiples of 2 bytes. The offset is sign-extended and added to the address of the
-        jump instruction to form the jump target address. Jumps can therefore target a ±1 MiB range.
-        JAL stores the address of the instruction following the jump (pc+4) into register rd. The standard
-        software calling convention uses x1 as the return address register and x5 as an alternate link register.
+def RVIR_JAL : RVIR_Inst<"JAL", [Terminator]>{
+    // J is represented by JAL with rd=null
+    let arguments = (UI32Attr : $rd);
+    let successors = (successor AnySuccessor:$succ);
+    let summary = "Jump and link";
+    let description = [{
+      The jump and link (JAL) instruction uses the J-type format, where the J-immediate encodes a
+      signed offset in multiples of 2 bytes. The offset is sign-extended and added to the address of the
+      jump instruction to form the jump target address. Jumps can therefore target a ±1 MiB range.
+      JAL stores the address of the instruction following the jump (pc+4) into register rd. The standard
+      software calling convention uses x1 as the return address register and x5 as an alternate link register.
     }];
     let opcode = 111;
 }
 
-def RVIR_JALR : RVIR_Inst<"JALR">{
+def RVIR_JALR : RVIR_Inst<"JALR", [Terminator]>{
     // imm = 12 bit offset
-    let arguments = (ins I32Attr:$imm, reg:$rs1, reg:$rd);
+    let arguments = (ins RegisterType:$rs1, RegisterType:$rd);
     let summary = "Jump and link register";
     let description = [{
-        The indirect jump instruction JALR (jump and link register) uses the I-type encoding. The target
-        address is obtained by adding the sign-extended 12-bit I-immediate to the register rs1, then setting
-        the least-significant bit of the result to zero. The address of the instruction following the jump
-        (pc+4) is written to register rd. Register x0 can be used as the destination if the result is not
-        required.
+       The indirect jump instruction JALR (jump and link register) uses the I-type encoding. The target
+       address is obtained by adding the sign-extended 12-bit I-immediate to the register rs1, then setting
+       the least-significant bit of the result to zero. The address of the instruction following the jump
+       (pc+4) is written to register rd. Register x0 can be used as the destination if the result is not
+       required.
     }];
     let opcode = 111;
+    let successors = (successor AnySuccessor:$succ);
     int func3 = 0;
 }
 
 // Conditional branches
-class RVIR_BRANCH <string mnemonic, list<Trait> traits = []>
+class RVIR_BRANCH <string mnemonic, list<Trait> traits = [Terminator]>
     : RVIR_Inst<mnemonic, traits>{
-    let arguments = (ins I32Attr
-                      : $offset, reg
-                      : $rs2, reg
-                      : $rs1);
+    // Also model the 2 registers here, that should be rs1 and rs2 as they can be
+    // virtual registers...
+    let arguments = (ins 
+        RegisterType : $rs2,
+        RegisterType : $rs1);
     int func3;
     let opcode = 99;
+
+    let successors = (successor AnySuccessor:$succ);
 }
 
 def RVIR_BEQ : RVIR_BRANCH<"BEQ"> {
@@ -304,6 +322,7 @@ def RVIR_BEQ : RVIR_BRANCH<"BEQ"> {
     }];
     let func3 = 0;
 }
+
 def RVIR_BNE : RVIR_BRANCH<"BNE">{
     let summary = "Branch if not equal";
     let description = [{
@@ -354,7 +373,7 @@ class RVIR_LOAD <string mnemonic, list<Trait> traits = []>
     let opcode = 3;
     int func3; // width
     // offset of 12 bit
-    let arguments = (ins I32Attr:$offset, reg:$rs1, reg:$rd);
+    let arguments = (ins I32Attr:$offset, UI32Attr:$rs1, UI32Attr:$rd);
 }
 def RVIR_LW : RVIR_LOAD<"LW">{
     let summary = "Load word";
@@ -417,7 +436,7 @@ class RVIR_STORE <string mnemonic, list<Trait> traits = []>
     let opcode = 35;
     int func3; // width
     // offset of 12 bit
-    let arguments = (ins I32Attr:$offset, reg:$rs1, reg:$rs2);
+    let arguments = (ins I32Attr:$offset, UI32Attr:$rs1, UI32Attr:$rs2);
 }
 def RVIR_SW : RVIR_STORE<"SW">{
     let summary = "Store word";
@@ -462,7 +481,7 @@ def RVIR_FENCE : RVIR_Inst<"FENCE">{
         of the same. Informally, no other RISC-V hart or external device can observe any operation in the
         successor set following a FENCE before any operation in the predecessor set preceding the FENCE.
     }];
-    let arguments = (ins I4:$fm, bool:$PI, bool:$PO, bool:$PW, bool:$SI, bool:$SO, bool:$SR, bool:$SW, reg:$rs1, reg:$rd);
+    let arguments = (ins I4:$fm, bool:$PI, bool:$PO, bool:$PW, bool:$SI, bool:$SO, bool:$SR, bool:$SW, UI32Attr:$rs1, UI32Attr:$rd);
     int func3 = 0;
     let opcode = 15;
 }
@@ -473,7 +492,7 @@ class RVIR_SYSTEM <string mnemonic, list<Trait> traits = []>
     let opcode = 115;
     int func3;
     int func12;
-    let arguments = (ins reg:$rs1, reg:$rd);
+    let arguments = (ins UI32Attr:$rs1, UI32Attr:$rd);
 }
 def RVIR_ECALL : RVIR_SYSTEM<"ECALL">{
     let summary = "service request";
