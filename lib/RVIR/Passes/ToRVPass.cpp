@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <memory.h>
+#include <memory>
 #include <optional>
 
 #include "RVIR/RVIROps.h"
@@ -12,10 +13,12 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 
@@ -30,7 +33,7 @@ rvir::ConstantRegOp ConstantReg(PatternRewriter &rewriter, Location loc,
   return rewriter.create<rvir::ConstantRegOp>(loc, outputType);
 }
 
-rvir::ConstantRegOp NullReg(PatternRewriter& rewriter, Location loc){
+rvir::ConstantRegOp NullReg(PatternRewriter &rewriter, Location loc) {
   return ConstantReg(rewriter, loc, 0);
 }
 
@@ -50,10 +53,69 @@ ADDI Move(PatternRewriter &rewriter, Location loc,
                                from); // rd: read/input register
 }
 
+LogicalResult convertFunc(mlir::func::FuncOp function,
+                          mlir::OpBuilder &builder) {
+  if (llvm::any_of(function.getFunctionType().getInputs(),
+                   [](auto t) { return isa<rvir::RegisterType>(t); }) ||
+      llvm::any_of(function.getFunctionType().getResults(),
+                   [](auto t) { return isa<rvir::RegisterType>(t); })) {
+    return function->emitError() << "function already has RVIR types";
+  }
+
+  const auto numResults = function.getFunctionType().getNumResults();
+  assert(numResults <= 2 && "more then 2 results not supported yet");
+  const auto numResultsInRegs = std::min<decltype(numResults)>(numResults, 2);
+  const auto regType = builder.getType<rvir::RegisterType>(std::nullopt);
+  const std::vector<Type> resTypes(numResultsInRegs, regType);
+
+  const auto numInputs = function.getFunctionType().getNumInputs();
+  const auto numArgumentsInRegs =
+      std::min<decltype(numInputs)>(8 - resTypes.size(), numInputs);
+  assert(numInputs <= numArgumentsInRegs &&
+         "more then 8 arguments/results not supported yet");
+
+  const std::vector<rvir::RegisterType> inputTypes(numArgumentsInRegs, regType);
+  function.setFunctionType(builder.getFunctionType(
+      llvm::map_to_vector(inputTypes, [](auto t) -> Type { return t; }),
+      resTypes));
+  // TODO: deal the inputs that did not fit in the registers, so when
+  // numInputs - numArgumentsInRegs != 0
+
+  // fix the inputs
+  auto &blocks = function.getBody().getBlocks();
+  for (auto &block : blocks) {
+    builder.setInsertionPointToStart(&block);
+    for (std::size_t i = 0; i < block.getNumArguments(); ++i) {
+      auto arg = block.getArgument(0);
+      // add all the new arguments in the back
+      auto newArg = block.addArgument(inputTypes[i], arg.getLoc());
+      auto convertedArg =
+          builder.create<RegValue>(newArg.getLoc(), arg.getType(), newArg);
+      arg.replaceAllUsesWith(convertedArg);
+      block.eraseArgument(0); // remove the old argument
+    }
+  }
+
+  // fix the outputs
+  function->walk([&builder, regType](func::ReturnOp returnOp) {
+    assert(returnOp->getOperands().size() <= 2 &&
+           "No more then 2 results supported at tihs time.");
+    for (auto [index, val] :
+         llvm::enumerate(returnOp->getOperands().take_front(2))) {
+      builder.setInsertionPointAfterValue(val);
+      auto convertVal = builder.create<ValueReg>(val.getLoc(), regType, val);
+      returnOp.setOperand(index, convertVal);
+    }
+  });
+  return success();
+}
+
 class CmpIPattern : public OpRewritePattern<arith::CmpIOp> {
 public:
   CmpIPattern(PatternBenefit benefit, MLIRContext *context)
-      : OpRewritePattern(context, 1) {}
+      : OpRewritePattern(context, 1) {
+    setDebugName("cmpi");
+  }
 
   LogicalResult
   matchAndRewrite(arith::CmpIOp cmpOp,
@@ -103,6 +165,8 @@ public:
   CondBranchOpPattern(PatternBenefit benefit, MLIRContext *context)
       : OpRewritePattern(context, 1) {}
 
+  void initialize() { setDebugName("condBranch"); }
+
   LogicalResult matchAndRewrite(cf::CondBranchOp op,
                                 PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(op);
@@ -116,7 +180,8 @@ public:
     auto *oldBlock = rewriter.getBlock();
 
     auto condValue = regValCond.getInput();
-    rewriter.create<rvir::BEQ>(op->getLoc(), condValue, NullReg(rewriter, op->getLoc()),
+    rewriter.create<rvir::BEQ>(op->getLoc(), condValue,
+                               NullReg(rewriter, op->getLoc()),
                                op.getFalseDest());
 
     // if the true dest was the next block, maybe we can skip this?
@@ -128,7 +193,8 @@ public:
     // uint32_t rs1, uint32_t rd, ::mlir::Block *succ);
     rewriter.setInsertionPointToStart(newBlock);
     rewriter.create<rvir::JALR>(op->getLoc(), op.getCondition(),
-                                NullReg(rewriter, op.getLoc()), op.getTrueDest());
+                                NullReg(rewriter, op.getLoc()),
+                                op.getTrueDest());
 
     op.erase();
 
@@ -139,11 +205,9 @@ public:
 class RegValValRegRVIRPattern : public OpRewritePattern<rvir::ValueReg> {
 public:
   RegValValRegRVIRPattern(PatternBenefit benefit, MLIRContext *context)
-      : OpRewritePattern(context, 1) {}
-
-  /// This overload constructs a pattern that only matches operations with the
-  /// root name of `MyOp`.
-  void initialize() { setDebugName("RegValValRegRVIR pattern"); }
+      : OpRewritePattern(context, 1) {
+    setDebugName("RegValValRegRVIR");
+  }
 
   LogicalResult matchAndRewrite(rvir::ValueReg valReg,
                                 PatternRewriter &rewriter) const override {
@@ -184,9 +248,9 @@ class ConstantRVIRPattern : public RewritePattern {
 public:
   ConstantRVIRPattern(PatternBenefit benefit, MLIRContext *context)
       : RewritePattern(arith::ConstantOp::getOperationName(), benefit,
-                       context) {}
-
-  void initialize() { setDebugName("ConstantRVIR pattern"); }
+                       context) {
+    setDebugName("ConstantRVIR");
+  }
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
@@ -222,32 +286,38 @@ public:
 };
 
 class ToRVPass : public impl::ToRVBase<ToRVPass> {
+  using impl::ToRVBase<ToRVPass>::ToRVBase;
+
   FrozenRewritePatternSet patterns;
 
   LogicalResult initialize(MLIRContext *context) override {
     RewritePatternSet rewritePatterns(context);
     rewritePatterns // add<TPattern>(benefit, context)
-        .add<CmpIPattern>(1, context)
-        .add<CondBranchOpPattern>(1, context)
-        .add<ConstantRVIRPattern>(1, context)
-        .add<RegValValRegRVIRPattern>(1, context);
+                    // .add<FuncPattern>(1, context) // func is applied manually
+                    // to the function, as the reedyrewriter never seems to
+                    // acually visit it.
+                        .add<CmpIPattern>(1, context)
+                        .add<CondBranchOpPattern>(1, context)
+                        .add<ConstantRVIRPattern>(1, context)
+                        .add<RegValValRegRVIRPattern>(1, context);
 
-    patterns = FrozenRewritePatternSet(std::move(rewritePatterns), std::nullopt,
-                                       std::nullopt);
+    patterns = FrozenRewritePatternSet(std::move(rewritePatterns),
+                                       disabledPatterns, enabledPatterns);
 
     return success();
   }
+
+  class LocalRewrite : public PatternRewriter {
+  public:
+    LocalRewrite(mlir::MLIRContext *context) : PatternRewriter(context) {}
+  };
 
   void runOnOperation() final {
     auto function = getOperation();
     OpBuilder builder(&getContext());
 
-    // remove the arguments from the function.
-    // TODO: find out how to change the callers.
     builder.setInsertionPointToStart(
         &*function.getFunctionBody().getBlocks().begin());
-    // builder.create<rvir::RegValue>(builder.getUnknownLoc(), 2); // x2 is the
-    // stack pointer
 
     // RISCV calling convention:
     // - x10 to x17 for the first 8 arguments
@@ -256,65 +326,16 @@ class ToRVPass : public impl::ToRVBase<ToRVPass> {
     // - x2 is the stack pointer
     // - x3 is the global pointer
 
-    auto regIndex =
-        10; // as the registers for fnction arguments are straightforward they
-            // are set to the correct value straight away.
-    auto numResults = function.getFunctionType().getNumResults();
-    assert(numResults <= 2 && "more then 2 results not supported yet");
-    auto numResultsInRegs = std::min<decltype(numResults)>(numResults, 2);
-    std::vector<Type> resTypes;
-    // for(auto resType : function.getFunctionType().getResults()){
-    for (std::size_t i = 0; i < numResultsInRegs; i++) {
-      resTypes.push_back(builder.getType<rvir::RegisterType>(std::nullopt));
-      regIndex++;
-    }
-
-    auto numInputs = function.getFunctionType().getNumInputs();
-    auto numArgumentsInRegs =
-        std::min<decltype(numInputs)>(8 - resTypes.size(), numInputs);
-    assert(numInputs <= numArgumentsInRegs &&
-           "more then 8 arguments/results not supported yet");
-
-    std::vector<rvir::RegisterType> inputTypes;
-    for (std::size_t i = 0; i < numArgumentsInRegs; i++) {
-      // arguments are passed in registers x10 to x17 (aka a0 to a7)
-      inputTypes.push_back(builder.getType<rvir::RegisterType>(std::nullopt));
-      regIndex++;
-    }
-    function.setFunctionType(builder.getFunctionType(
-        llvm::map_to_vector(inputTypes, [](auto t) -> Type { return t; }),
-        resTypes));
-    // TODO: deal the inputs that did not fit in the registers, so when
-    // numInputs - numArgumentsInRegs != 0
-
-    // fix the inputs
-    for (auto &block : function.getBody().getBlocks()) {
-      for (std::size_t i = 0; i < block.getNumArguments(); ++i) {
-        auto arg = block.getArgument(i);
-        auto newArg = block.insertArgument(i, inputTypes[i], arg.getLoc());
-        auto convertedArg =
-            builder.create<RegValue>(newArg.getLoc(), arg.getType(), newArg);
-        arg.replaceAllUsesWith(convertedArg);
-        block.eraseArgument(i + 1); // the old argument is now after the new one
-      }
-    }
-
-    // fix the outputs
-    function->walk([&builder](func::ReturnOp returnOp) {
-      assert(returnOp->getOperands().size() <= 2 &&
-             "No more then 2 results supported at tihs time.");
-      for (auto [index, val] :
-           llvm::enumerate(returnOp->getOperands().take_front(2))) {
-        builder.setInsertionPointAfterValue(val);
-        auto convertVal = builder.create<ValueReg>(
-            val.getLoc(), builder.getType<RegisterType>(std::nullopt), val);
-        returnOp.setOperand(index, convertVal);
-      }
-    });
-
     GreedyRewriteConfig config;
     config.maxIterations = 10;
-    config.enableRegionSimplification = true;
+
+    if (failed(convertFunc(function, builder))) {
+      function.emitError() << "Failed to convert function parameters \n";
+      return signalPassFailure();
+    }
+    assert(succeeded(function.verify()) &&
+           "function not valid after conversion");
+
     if (failed(applyPatternsAndFoldGreedily(function, patterns, config))) {
       function->emitError() << "Fialed to apply patterns in ToRVPass \n";
       return signalPassFailure();
