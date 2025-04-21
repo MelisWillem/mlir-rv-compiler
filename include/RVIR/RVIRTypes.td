@@ -24,9 +24,9 @@ def RegisterType : RVIR_Type<"Register", "reg"> {
     The `register` type is used to represent a register in the RISC-V dialect.
   }];
 
-  let parameters = (ins "std::optional<int>":$id);
+  let parameters = (ins DefaultValuedParameter<"std::optional<int>", "std::nullopt">:$id);
   let assemblyFormat = [{
-    `<` $id `>`
+    (`<` $id^ `>`)?
   }];
 }
 
