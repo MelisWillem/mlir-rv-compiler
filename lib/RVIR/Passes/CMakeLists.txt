@@ -1,5 +1,6 @@
 add_mlir_dialect_library(RVIRPasses
  ToRVPass.cpp
+ RegAllocPass.cpp
 
  DEPENDS
 

@@ -200,7 +200,7 @@ class RVIR_RTypeInst <string mnemonic, list<Trait> traits = []>
 def RVIR_ADD : RVIR_RTypeInst<"ADD">{
     let summary = "addition of rs1 and rs2";
     let description = [{
-        ADD performs the addition of rs1 and rs2.
+        ADD performs1 the addition of rs1 and rs2.
 
         Overflows are ignored and the low XLEN bits of results are written to the destination rd.
     }];
