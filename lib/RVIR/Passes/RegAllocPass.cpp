@@ -77,6 +77,11 @@ getUnassignedIntervals(Block &block, const std::vector<RegType> &resultRegs) {
     // the end will be updated on usage in the next for loop
   }
   for (auto [index, op] : llvm::enumerate(block)) {
+    if (isa<rvir::ConstantRegOp>(op)) {
+      // Constant ops are not used in the register allocation, they by
+      // definition already have a register allocated. them.
+      continue;
+    }
     if (isa<func::ReturnOp>(op)) {
       // return ops have register value already set, so we don't keep track of
       // the interval here.
@@ -320,9 +325,11 @@ static LogicalResult runLearScanRegAlloc(Block &block, mlir::OpBuilder &builder,
       assert(llvm::isa<BlockArgument>(value));
       auto arg = cast<BlockArgument>(value);
       const auto argNum = arg.getArgNumber();
-      auto newArg = block.insertArgument(argNum, mlir::rvir::RegisterType::get(builder.getContext(), reg), arg.getLoc());
+      auto newArg = block.insertArgument(
+          argNum, mlir::rvir::RegisterType::get(builder.getContext(), reg),
+          arg.getLoc());
       arg.replaceAllUsesWith(newArg);
-      block.eraseArgument(argNum+1);
+      block.eraseArgument(argNum + 1);
     }
   }
 
