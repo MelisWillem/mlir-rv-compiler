@@ -1,18 +1,17 @@
 // RUN: rv-opt %s -mem2reg -to-rv > %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s
 
-// CHECK: module {
-// CHECK:   func.func @foo(%arg0: !rvir.reg, %arg1: !rvir.reg) -> !rvir.reg {
-// CHECK:     %0 = "rvir.ADDI"() <{imm = 23 : i32}> : () -> !rvir.reg
-// CHECK:     %1 = "rvir.SLT"(%arg0, %0) : (!rvir.reg, !rvir.reg) -> !rvir.reg
-// CHECK:     %2 = "rvir.Const"() : () -> !rvir.reg<0>
-// CHECK:     "rvir.BEQ"(%1, %2)[^bb2] : (!rvir.reg, !rvir.reg<0>) -> ()
-// CHECK:   ^bb1(%3: !rvir.reg):  // pred: ^bb2
-// CHECK:     return %3 : !rvir.reg
-// CHECK:   ^bb2:  // pred: ^bb0
-// CHECK:     %4 = "rvir.Const"() : () -> !rvir.reg<0>
-// CHECK:     "rvir.BEQ"(%arg1, %4)[^bb1] : (!rvir.reg, !rvir.reg<0>) -> ()
-// CHECK:   }
+// CHECK: func.func @foo(%arg0: !rvir.reg, %arg1: !rvir.reg) -> !rvir.reg {
+// CHECK:   %0 = "rvir.Const"() : () -> !rvir.reg<0>
+// CHECK:   %1 = "rvir.ADDI"(%0) <{imm = 23 : i32}> : (!rvir.reg<0>) -> !rvir.reg
+// CHECK:   %2 = "rvir.SLT"(%arg0, %1) : (!rvir.reg, !rvir.reg) -> !rvir.reg
+// CHECK:   %3 = "rvir.Const"() : () -> !rvir.reg<0>
+// CHECK:   "rvir.BEQ"(%2, %3)[^bb2] : (!rvir.reg, !rvir.reg<0>) -> ()
+// CHECK: ^bb1(%4: !rvir.reg):  // pred: ^bb2
+// CHECK:   return %4 : !rvir.reg
+// CHECK: ^bb2:  // pred: ^bb0
+// CHECK:   %5 = "rvir.Const"() : () -> !rvir.reg<0>
+// CHECK:   "rvir.BEQ"(%arg1, %5)[^bb1] : (!rvir.reg, !rvir.reg<0>) -> ()
 // CHECK: }
 
 module {

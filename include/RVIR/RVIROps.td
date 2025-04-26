@@ -56,7 +56,7 @@ def ValueReg : RVIR_Op<"ValReg", [Pure]>{
 class RVIR_RegisterImmediateInst <string mnemonic, list<Trait> traits = []>
     : RVIR_Inst<mnemonic, traits>{
 
-    let arguments = (ins I32Attr:$imm, Optional<RegisterType>:$rd);
+    let arguments = (ins I32Attr:$imm, RegisterType:$rd);
     let results = (outs RegisterType:$rs1);
     let opcode = 19;
 

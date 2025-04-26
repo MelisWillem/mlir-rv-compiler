@@ -268,12 +268,14 @@ public:
       auto val = APIntVal.getZExtValue();
       rewriter.setInsertionPointAfterValue(constantOp);
       // pseudo move instruction
+      auto nullReg = rewriter.create<rvir::ConstantRegOp>(
+          constantOp->getLoc(),
+          rewriter.getType<rvir::RegisterType>(0)); // ::mlir::Type rd,
       auto newAdd =
           rewriter.create<ADDI>(constantOp->getLoc(),
                                 VirtRegister(rewriter), // rd: output register
                                 val,                    // imm
-                                nullptr // rd: set to null register
-          );
+                                nullReg); // rd: set to null register
       auto newRegVal = rewriter.create<rvir::RegValue>(
           newAdd->getLoc(), constantOp.getResult().getType(), newAdd);
       constantOp.replaceAllUsesWith(newRegVal.getResult());
@@ -296,10 +298,10 @@ class ToRVPass : public impl::ToRVBase<ToRVPass> {
                     // .add<FuncPattern>(1, context) // func is applied manually
                     // to the function, as the reedyrewriter never seems to
                     // acually visit it.
-                        .add<CmpIPattern>(1, context)
-                        .add<CondBranchOpPattern>(1, context)
-                        .add<ConstantRVIRPattern>(1, context)
-                        .add<RegValValRegRVIRPattern>(1, context);
+        .add<CmpIPattern>(1, context)
+        .add<CondBranchOpPattern>(1, context)
+        .add<ConstantRVIRPattern>(1, context)
+        .add<RegValValRegRVIRPattern>(1, context);
 
     patterns = FrozenRewritePatternSet(std::move(rewritePatterns),
                                        disabledPatterns, enabledPatterns);

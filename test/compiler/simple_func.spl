@@ -1,19 +1,30 @@
-// RUN: cspl -i %S/simple_func.spl -o %t.mlir
-// RUN: FileCheck --input-file=%t.mlir %s
+// RUN: cspl -RVIR -i %S/simple_func.spl -o %t.mlir
+// RUN: FileCheck --check-prefix=CHECK-MLIR --input-file=%t.mlir %s
+// RUN: cspl -i %S/simple_func.spl -o %t.asm
+// RUN: FileCheck --check-prefix=CHECK-ASM --input-file=%t.asm %s
 
-// CHECK: module {
-// CHECK:   func.func @foo(%arg0: !rvir.reg<11>, %arg1: !rvir.reg<12>) -> !rvir.reg<10> {
-// CHECK:     %0 = "rvir.ADDI"() <{imm = 23 : i32}> : () -> !rvir.reg<4>
-// CHECK:     %1 = "rvir.SLT"(%arg0, %0) : (!rvir.reg<11>, !rvir.reg<4>) -> !rvir.reg<4>
-// CHECK:     %2 = "rvir.Const"() : () -> !rvir.reg<0>
-// CHECK:     "rvir.BEQ"(%1, %2)[^bb2] : (!rvir.reg<4>, !rvir.reg<0>) -> ()
-// CHECK:   ^bb1(%3: !rvir.reg<10>):  // pred: ^bb2
-// CHECK:     return %3 : !rvir.reg<10>
-// CHECK:   ^bb2:  // pred: ^bb0
-// CHECK:     %4 = "rvir.Const"() : () -> !rvir.reg<0>
-// CHECK:     "rvir.BEQ"(%arg1, %4)[^bb1] : (!rvir.reg<12>, !rvir.reg<0>) -> ()
-// CHECK:   }
-// CHECK: }
+// CHECK-MLIR: func.func @foo(%arg0: !rvir.reg<11>, %arg1: !rvir.reg<12>) -> !rvir.reg<10> {
+// CHECK-MLIR:   %0 = "rvir.Const"() : () -> !rvir.reg<0>
+// CHECK-MLIR:   %1 = "rvir.ADDI"(%0) <{imm = 23 : i32}> : (!rvir.reg<0>) -> !rvir.reg<4>
+// CHECK-MLIR:   %2 = "rvir.SLT"(%arg0, %1) : (!rvir.reg<11>, !rvir.reg<4>) -> !rvir.reg<4>
+// CHECK-MLIR:   %3 = "rvir.Const"() : () -> !rvir.reg<0>
+// CHECK-MLIR:   "rvir.BEQ"(%2, %3)[^bb2] : (!rvir.reg<4>, !rvir.reg<0>) -> ()
+// CHECK-MLIR: ^bb1(%4: !rvir.reg<10>):  // pred: ^bb2
+// CHECK-MLIR:   return %4 : !rvir.reg<10>
+// CHECK-MLIR: ^bb2:  // pred: ^bb0
+// CHECK-MLIR:   %5 = "rvir.Const"() : () -> !rvir.reg<0>
+// CHECK-MLIR:   "rvir.BEQ"(%arg1, %5)[^bb1] : (!rvir.reg<12>, !rvir.reg<0>) -> ()
+// CHECK-MLIR: }
+
+// CHECK-ASM: foo:
+// CHECK-ASM:     ADDI x4, x0, 23
+// CHECK-ASM:     SLT x4, x11, x4
+// CHECK-ASM:     BEQ x0, x4, foo2
+// CHECK-ASM: foo1:
+// CHECK-ASM:     ret
+// CHECK-ASM: foo2:
+// CHECK-ASM:     BEQ x0, x12, foo1
+
 func foo(number: int, flag: bool) -> int{
     if number > 23 {
         return number;
