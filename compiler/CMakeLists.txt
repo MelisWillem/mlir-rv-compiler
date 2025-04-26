@@ -5,7 +5,8 @@ add_definitions("-fno-rtti")
 add_subdirectory(tokenizer)
 add_subdirectory(parser)
 
-add_executable(cspl main.cpp)
+add_executable(cspl 
+    main.cpp printer.cpp)
 target_link_libraries(cspl PRIVATE
     LLVMSupport
     TokenLib

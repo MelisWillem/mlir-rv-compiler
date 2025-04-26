@@ -2,8 +2,9 @@
 // RUN: FileCheck --input-file=%t.mlir %s
 
 // CHECK: func.func @foo() -> !rvir.reg {
-// CHECK:   %0 = "rvir.ADDI"() <{imm = -1 : i32}> : () -> !rvir.reg
-// CHECK:   return %0 : !rvir.reg
+// CHECK:   %0 = "rvir.Const"() : () -> !rvir.reg<0>
+// CHECK:   %1 = "rvir.ADDI"(%0) <{imm = -1 : i32}> : (!rvir.reg<0>) -> !rvir.reg
+// CHECK:   return %1 : !rvir.reg
 // CHECK: }
 
 module {
