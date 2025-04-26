@@ -68,10 +68,16 @@ struct Interval {
   }
 };
 
-static std::pair<std::vector<Interval>, std::map<void *, RegType>>
+struct ValueCmp{
+  bool operator()(const Value& lhs, const Value& rhs) const {
+    return lhs.getAsOpaquePointer() < rhs.getAsOpaquePointer();
+  }
+};
+
+static std::pair<std::vector<Interval>, std::map<mlir::Value, RegType, ValueCmp>>
 getUnassignedIntervals(Block &block, const std::vector<RegType> &resultRegs) {
   std::vector<Interval> intervals;
-  std::map<void *, RegType> valueRegAssignment;
+  std::map<mlir::Value, RegType, ValueCmp> valueRegAssignment;
   for (auto &arg : block.getArguments()) {
     intervals.push_back({0, 0, arg});
     // the end will be updated on usage in the next for loop
@@ -88,13 +94,13 @@ getUnassignedIntervals(Block &block, const std::vector<RegType> &resultRegs) {
       for (auto [i, res] : llvm::enumerate(op.getOperands())) {
         // The operands of a returnOp as the return values, these should be
         // preset to the provided registers.
-        if (valueRegAssignment.find(res.getAsOpaquePointer()) !=
+        if (valueRegAssignment.find(res) !=
             valueRegAssignment.end()) {
-          valueRegAssignment[res.getAsOpaquePointer()] = resultRegs[i];
+          valueRegAssignment[res] = resultRegs[i];
         } else {
           assert(i < resultRegs.size() &&
                  "Not enough result registers provided");
-          valueRegAssignment.insert({res.getAsOpaquePointer(), resultRegs[i]});
+          valueRegAssignment.insert({res, resultRegs[i]});
         }
       }
       continue;
@@ -239,7 +245,7 @@ public:
 };
 
 static std::vector<Interval> LinearScan(const std::vector<Interval> &intervals,
-                                        std::map<void *, RegType> &valueMap) {
+                                        std::map<Value, RegType, ValueCmp> &valueMap) {
   std::vector<Interval> assignedRegisters;
   IntervalTracker intervalTracker;
   RegisterAlloc regAlloc;
@@ -248,13 +254,13 @@ static std::vector<Interval> LinearScan(const std::vector<Interval> &intervals,
   for (auto interval : intervals) {
     for (auto expInterval :
          intervalTracker.expireOldIntervals(interval.begin)) {
-      if (valueMap.find(expInterval.value.getAsOpaquePointer()) !=
+      if (valueMap.find(expInterval.value) !=
           valueMap.end()) {
-        auto reg = valueMap[expInterval.value.getAsOpaquePointer()];
+        auto reg = valueMap[expInterval.value];
         regAlloc.freeRegister(reg);
       }
     }
-    auto regMapIt = valueMap.find(interval.value.getAsOpaquePointer());
+    auto regMapIt = valueMap.find(interval.value);
     if (regMapIt != valueMap.end()) {
       // value already has a register assigned, most likely this is a value on a
       // return statement.
@@ -276,7 +282,7 @@ static std::vector<Interval> LinearScan(const std::vector<Interval> &intervals,
              "the value should not be in the map yet");
       intervalTracker.addInterval(interval);
       assignedRegisters.push_back(interval);
-      valueMap.insert({interval.value.getAsOpaquePointer(), maybeReg.value()});
+      valueMap.insert({interval.value, maybeReg.value()});
     }
   }
 
@@ -291,14 +297,14 @@ static LogicalResult runLearScanRegAlloc(Block &block, mlir::OpBuilder &builder,
     // add the input registers to the valueRegMap
     for (auto [index, arg] : llvm::enumerate(block.getArguments())) {
       auto reg = inputRegs[index];
-      valueRegMap.insert({arg.getAsOpaquePointer(), reg});
+      valueRegMap.insert({arg, reg});
     }
   }
   auto assignedRegisters = LinearScan(intervals, valueRegMap);
 
   // now apply the register choices to the ir
   for (auto [begin, end, value] : intervals) {
-    auto valueRegIt = valueRegMap.find(value.getAsOpaquePointer());
+    auto valueRegIt = valueRegMap.find(value);
     if (valueRegIt == valueRegMap.end()) {
       llvm::errs() << "unable to allocated register to value: " << value
                    << "\n";
