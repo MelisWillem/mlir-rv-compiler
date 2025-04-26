@@ -11,4 +11,6 @@ target_link_libraries(cspl PRIVATE
     TokenLib
     ParserLib
     MLIRTransforms
-    MLIRSCFToControlFlow)
+    MLIRSCFToControlFlow
+    RVIRPasses
+    )

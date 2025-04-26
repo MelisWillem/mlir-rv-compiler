@@ -2,6 +2,7 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "parser/parser.h"
 #include "token/tokenizer.h"
@@ -10,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include "RVIR/RVIRPasses.h"
 
 using namespace llvm;
 
@@ -72,6 +74,8 @@ int main(int argc, char **argv) {
     auto pm = mlir::PassManager::on<mlir::ModuleOp>(&context);
     pm.addPass(mlir::createConvertSCFToCFPass());
     pm.addPass(mlir::createMem2Reg());
+    pm.addNestedPass<mlir::func::FuncOp>(mlir::rvir::createToRV());
+    pm.addNestedPass<mlir::func::FuncOp>(mlir::rvir::createRegAlloc());
 
     if(pm.run(module).failed()){
       std::cerr << "Failed to compile module \n";
